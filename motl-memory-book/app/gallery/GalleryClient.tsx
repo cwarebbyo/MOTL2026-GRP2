@@ -292,6 +292,10 @@ export default function GalleryClient({
           color: #231a12;
         }
 
+        .lightbox-edit {
+          margin-top: 24px;
+        }
+
         .gallery-hero {
           max-width: 1400px;
           margin: 0 auto 28px auto;
