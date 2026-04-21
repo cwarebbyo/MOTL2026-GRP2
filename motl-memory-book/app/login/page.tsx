@@ -32,7 +32,12 @@ export default function LoginPage() {
       .eq('dob', formattedDob)
       .maybeSingle()
   
-    if (queryError || !data) {
+    if (queryError) {
+      setError(queryError.message)
+      return
+    }
+
+    if (!data) {
       setError('Not found')
       return
     }
