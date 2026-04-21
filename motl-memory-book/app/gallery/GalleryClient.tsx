@@ -601,18 +601,34 @@ export default function GalleryClient({
         }
 
         .save-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        
+          width: 100%;
+          min-height: 44px; /* 👈 key fix */
+          padding: 12px 16px;
+        
           border: none;
-          border-radius: 14px;
+          border-radius: 12px;
+        
           background: #231a12;
           color: white;
-          font-weight: 700;
-          padding: 0 16px;
+        
+          font-size: 14px;
+          font-weight: 600;
+        
           cursor: pointer;
         }
 
         .save-button:disabled {
           opacity: 0.6;
           cursor: default;
+        }
+
+        .lightbox-edit .save-button {
+          min-height: 48px;
+          padding: 14px 16px;
         }
 
         .lightbox {
