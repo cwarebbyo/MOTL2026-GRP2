@@ -84,15 +84,17 @@ export default function GalleryClient({
   }, [attendees])
 
   const items = useMemo<GalleryItem[]>(() => {
-    return media.map((item) => {
-      const person = attendeeMap.get(item.attendee_id)
-      return {
-        ...item,
-        uploaderName: formatLongName(person?.first_name, person?.last_name),
-        uploaderShortName: formatShortName(person?.first_name, person?.last_name),
-        uploaderAvatar: person?.profile_photo_url || null,
-      }
-    })
+    return media
+      .filter((item) => !item.is_profile_photo)
+      .map((item) => {
+        const person = attendeeMap.get(item.attendee_id)
+        return {
+          ...item,
+          uploaderName: formatLongName(person?.first_name, person?.last_name),
+          uploaderShortName: formatShortName(person?.first_name, person?.last_name),
+          uploaderAvatar: person?.profile_photo_url || null,
+        }
+      })
   }, [media, attendeeMap])
 
   useEffect(() => {
