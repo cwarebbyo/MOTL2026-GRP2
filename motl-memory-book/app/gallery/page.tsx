@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { supabaseAdmin } from '../../lib/supabase-admin'
 
 export default async function GalleryPage() {
   const { data } = await supabaseAdmin.from('media').select('*')
