@@ -209,30 +209,7 @@ export default function GalleryClient({
                 </div>
 
                 {item.caption ? <p className="caption">{item.caption}</p> : null}
-
-                {isMine ? (
-                  <div className="edit-block">
-                    <label>Edit location name</label>
-                    <div className="edit-row">
-                      <input
-                        value={draftLocations[item.id] || ''}
-                        onChange={(e) =>
-                          setDraftLocations((prev) => ({
-                            ...prev,
-                            [item.id]: e.target.value,
-                          }))
-                        }
-                      />
-                      <button
-                        className="save-button"
-                        onClick={() => saveLocationName(item)}
-                        disabled={savingId === item.id}
-                      >
-                        {savingId === item.id ? 'Saving…' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
+                
               </div>
             </article>
           )
@@ -277,6 +254,30 @@ export default function GalleryClient({
               <p className="location-text">{selected.location_text || 'Location unknown'}</p>
               <p className="date-text">{formatDate(selected.taken_at)}</p>
               {selected.caption ? <p className="lightbox-caption">{selected.caption}</p> : null}
+              
+              {currentUserId === selected.attendee_id ? (
+                <div className="edit-block lightbox-edit">
+                  <label>Edit location name</label>
+                  <div className="edit-row">
+                    <input
+                      value={draftLocations[selected.id] || ''}
+                      onChange={(e) =>
+                        setDraftLocations((prev) => ({
+                          ...prev,
+                          [selected.id]: e.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      className="save-button"
+                      onClick={() => saveLocationName(selected)}
+                      disabled={savingId === selected.id}
+                    >
+                      {savingId === selected.id ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
