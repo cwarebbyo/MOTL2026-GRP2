@@ -63,7 +63,7 @@ export default function GalleryClient({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [draftLocations, setDraftLocations] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [saveMessage, setSaveMessage] = useState<string>('')
+  const [saveMessage, setSaveMessage] = useState('')
 
   useEffect(() => {
     const stored = localStorage.getItem('attendee')
@@ -135,7 +135,6 @@ export default function GalleryClient({
       return
     }
 
-    item.location_name = nextValue
     setSaveMessage('Location name updated.')
   }
 
@@ -146,8 +145,8 @@ export default function GalleryClient({
           <div className="hero-kicker">MOTL 2026 · Group 2</div>
           <h1>Shared Memory Book</h1>
           <p>
-            A warm, page-like gallery of witness, memory, and shared images — with uploader portraits,
-            meaningful locations, and space for the story behind every photo.
+            A warm, page-like gallery of witness, memory, and shared images — with uploader
+            portraits, meaningful locations, and space for the story behind every photo.
           </p>
         </div>
 
@@ -701,25 +700,6 @@ export default function GalleryClient({
           }
         }
       `}</style>
-    </div>
-  )
-}
-          onClick={() => setLightbox(null)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <img src={lightbox.file_url} style={{ maxHeight: '90%', maxWidth: '90%' }} />
-        </div>
-      )}
     </div>
   )
 }
