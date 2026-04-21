@@ -101,12 +101,12 @@ export default function GalleryClient({
   useEffect(() => {
     const nextLocations: Record<string, string> = {}
     const nextCaptions: Record<string, string> = {}
-  
+
     items.forEach((item) => {
       nextLocations[item.id] = item.location_name || ''
       nextCaptions[item.id] = item.caption || ''
     })
-  
+
     setDraftLocations(nextLocations)
     setDraftCaptions(nextCaptions)
   }, [items])
@@ -129,10 +129,10 @@ export default function GalleryClient({
   async function savePhotoDetails(item: GalleryItem) {
     const nextLocation = (draftLocations[item.id] || '').trim()
     const nextCaption = (draftCaptions[item.id] || '').trim()
-  
+
     setSavingId(item.id)
     setSaveMessage('')
-  
+
     const { error } = await supabase
       .from('media')
       .update({
@@ -140,14 +140,14 @@ export default function GalleryClient({
         caption: nextCaption || null,
       })
       .eq('id', item.id)
-  
+
     setSavingId(null)
-  
+
     if (error) {
       setSaveMessage(error.message)
       return
     }
-  
+
     item.location_name = nextLocation
     item.caption = nextCaption || null
     setSaveMessage('Photo details updated.')
@@ -189,7 +189,6 @@ export default function GalleryClient({
 
       <div className="gallery-grid">
         {filteredItems.map((item) => {
-          const isMine = currentUserId === item.attendee_id
           return (
             <article key={item.id} className="photo-card">
               <button className="image-button" onClick={() => setSelected(item)}>
@@ -199,6 +198,16 @@ export default function GalleryClient({
                   className="photo-image"
                 />
               </button>
+
+              <div className="photo-body">
+                <div className="photo-topline">
+                  <div>
+                    <h3>{item.location_name || 'Unnamed location'}</h3>
+                    <p>{item.location_text || 'Location unknown'}</p>
+                  </div>
+                  <time>{formatDate(item.taken_at)}</time>
+                </div>
+              </div>
 
               <div className="uploader-badge">
                 {item.uploaderAvatar ? (
@@ -210,17 +219,6 @@ export default function GalleryClient({
                   <strong>{item.uploaderShortName}</strong>
                   <span>Uploaded this photo</span>
                 </div>
-              </div>
-
-              <div className="photo-body">
-                <div className="photo-topline">
-                  <div>
-                    <h3>{item.location_name || 'Unnamed location'}</h3>
-                    <p>{item.location_text || 'Location unknown'}</p>
-                  </div>
-                  <time>{formatDate(item.taken_at)}</time>
-                </div>
-                
               </div>
             </article>
           )
@@ -264,7 +262,7 @@ export default function GalleryClient({
               <h2>{selected.location_name || 'Unnamed location'}</h2>
               <p className="location-text">{selected.location_text || 'Location unknown'}</p>
               <p className="date-text">{formatDate(selected.taken_at)}</p>
-              
+
               {currentUserId === selected.attendee_id ? (
                 <div className="edit-block lightbox-edit">
                   <label>Edit location name</label>
@@ -279,7 +277,7 @@ export default function GalleryClient({
                       }
                     />
                   </div>
-              
+
                   <label style={{ marginTop: '14px' }}>Edit caption</label>
                   <div className="edit-row">
                     <textarea
@@ -294,7 +292,7 @@ export default function GalleryClient({
                       }
                     />
                   </div>
-              
+
                   <div className="edit-actions">
                     <button
                       className="save-button"
@@ -337,7 +335,7 @@ export default function GalleryClient({
           resize: vertical;
           font-family: inherit;
         }
-        
+
         .edit-actions {
           margin-top: 14px;
         }
@@ -449,7 +447,8 @@ export default function GalleryClient({
         }
 
         .photo-card {
-          position: relative;
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
           border-radius: 28px;
           background: rgba(255, 255, 255, 0.88);
@@ -475,18 +474,12 @@ export default function GalleryClient({
         }
 
         .uploader-badge {
-          position: absolute;
-          top: 16px;
-          left: 16px;
-          right: 16px;
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 10px 12px;
-          border-radius: 18px;
-          background: rgba(22, 17, 12, 0.56);
-          backdrop-filter: blur(10px);
-          color: white;
+          padding: 12px 16px;
+          background: #fffaf2;
+          border-top: 1px solid #eadcc1;
         }
 
         .uploader-avatar {
@@ -521,12 +514,13 @@ export default function GalleryClient({
           display: block;
           font-size: 14px;
           line-height: 1.2;
+          color: #231a12;
         }
 
         .uploader-meta span {
           display: block;
           font-size: 12px;
-          color: rgba(255, 255, 255, 0.82);
+          color: #6e5d4c;
           margin-top: 2px;
         }
 
@@ -565,12 +559,6 @@ export default function GalleryClient({
           padding: 8px 12px;
         }
 
-        .caption {
-          margin: 14px 0 0 0;
-          color: #43382c;
-          line-height: 1.7;
-        }
-
         .edit-block {
           margin-top: 16px;
           padding-top: 16px;
@@ -604,20 +592,15 @@ export default function GalleryClient({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-        
           width: 100%;
-          min-height: 44px; /* 👈 key fix */
+          min-height: 44px;
           padding: 12px 16px;
-        
           border: none;
           border-radius: 12px;
-        
           background: #231a12;
           color: white;
-        
           font-size: 14px;
           font-weight: 600;
-        
           cursor: pointer;
         }
 
