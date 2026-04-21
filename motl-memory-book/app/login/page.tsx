@@ -24,14 +24,18 @@ export default function LoginPage() {
     }
   
     const formattedDob = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-  
+
+    console.log({ lastName: lastName.trim(), formattedDob })
+    
     const { data, error: queryError } = await supabase
       .from('attendees')
       .select('*')
-      .ilike('last_name', lastName.trim())
+      .ilike('last_name', `%${lastName.trim()}%`)
       .eq('dob', formattedDob)
       .maybeSingle()
-  
+
+    console.log({ queryError, data })
+    
     if (queryError) {
       setError(queryError.message)
       return
