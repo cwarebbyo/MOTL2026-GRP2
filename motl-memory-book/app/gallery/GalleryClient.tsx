@@ -254,8 +254,8 @@ export default function GalleryClient({
                   </div>
                 )}
                 <div>
-                  <strong>{selected.uploaderName}</strong>
-                  <span>Shared by {selected.uploaderShortName}</span>
+                  <strong>{selected.uploaderShortName}</strong>
+                  <span>Uploaded this photo</span>
                 </div>
               </div>
 
