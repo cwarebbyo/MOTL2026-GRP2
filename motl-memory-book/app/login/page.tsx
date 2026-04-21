@@ -12,30 +12,33 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     setError('')
-
+  
     if (!lastName || !month || !day || !year) {
       setError('Please fill out all fields')
       return
     }
-
-    const formattedDob = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`
-
+  
+    if (month.length < 1 || day.length < 1 || year.length !== 4) {
+      setError('Please enter a valid date')
+      return
+    }
+  
+    const formattedDob = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  
     const { data, error: queryError } = await supabase
       .from('attendees')
       .select('*')
-      .eq('last_name', lastName.trim())
+      .ilike('last_name', lastName.trim())
       .eq('dob', formattedDob)
-      .single()
-
+      .maybeSingle()
+  
     if (queryError || !data) {
       setError('Not found')
       return
     }
-
-    // store session (simple localStorage approach for now)
+  
     localStorage.setItem('attendee', JSON.stringify(data))
-
-    window.location.href = '/gallery'
+    window.location.href = '/me'
   }
 
   return (
