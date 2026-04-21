@@ -62,6 +62,7 @@ export default function GalleryClient({
   const [selected, setSelected] = useState<GalleryItem | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [draftLocations, setDraftLocations] = useState<Record<string, string>>({})
+  const [draftCaptions, setDraftCaptions] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
 
@@ -98,11 +99,16 @@ export default function GalleryClient({
   }, [media, attendeeMap])
 
   useEffect(() => {
-    const next: Record<string, string> = {}
+    const nextLocations: Record<string, string> = {}
+    const nextCaptions: Record<string, string> = {}
+  
     items.forEach((item) => {
-      next[item.id] = item.location_name || ''
+      nextLocations[item.id] = item.location_name || ''
+      nextCaptions[item.id] = item.caption || ''
     })
-    setDraftLocations(next)
+  
+    setDraftLocations(nextLocations)
+    setDraftCaptions(nextCaptions)
   }, [items])
 
   const filteredItems = useMemo(() => {
@@ -120,24 +126,31 @@ export default function GalleryClient({
     )
   }, [items, search])
 
-  async function saveLocationName(item: GalleryItem) {
-    const nextValue = (draftLocations[item.id] || '').trim()
+  async function savePhotoDetails(item: GalleryItem) {
+    const nextLocation = (draftLocations[item.id] || '').trim()
+    const nextCaption = (draftCaptions[item.id] || '').trim()
+  
     setSavingId(item.id)
     setSaveMessage('')
-
+  
     const { error } = await supabase
       .from('media')
-      .update({ location_name: nextValue })
+      .update({
+        location_name: nextLocation,
+        caption: nextCaption || null,
+      })
       .eq('id', item.id)
-
+  
     setSavingId(null)
-
+  
     if (error) {
       setSaveMessage(error.message)
       return
     }
-
-    setSaveMessage('Location name updated.')
+  
+    item.location_name = nextLocation
+    item.caption = nextCaption || null
+    setSaveMessage('Photo details updated.')
   }
 
   return (
@@ -207,8 +220,6 @@ export default function GalleryClient({
                   </div>
                   <time>{formatDate(item.taken_at)}</time>
                 </div>
-
-                {item.caption ? <p className="caption">{item.caption}</p> : null}
                 
               </div>
             </article>
@@ -253,7 +264,6 @@ export default function GalleryClient({
               <h2>{selected.location_name || 'Unnamed location'}</h2>
               <p className="location-text">{selected.location_text || 'Location unknown'}</p>
               <p className="date-text">{formatDate(selected.taken_at)}</p>
-              {selected.caption ? <p className="lightbox-caption">{selected.caption}</p> : null}
               
               {currentUserId === selected.attendee_id ? (
                 <div className="edit-block lightbox-edit">
@@ -268,16 +278,36 @@ export default function GalleryClient({
                         }))
                       }
                     />
+                  </div>
+              
+                  <label style={{ marginTop: '14px' }}>Edit caption</label>
+                  <div className="edit-row">
+                    <textarea
+                      className="caption-editor"
+                      rows={4}
+                      value={draftCaptions[selected.id] || ''}
+                      onChange={(e) =>
+                        setDraftCaptions((prev) => ({
+                          ...prev,
+                          [selected.id]: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+              
+                  <div className="edit-actions">
                     <button
                       className="save-button"
-                      onClick={() => saveLocationName(selected)}
+                      onClick={() => savePhotoDetails(selected)}
                       disabled={savingId === selected.id}
                     >
-                      {savingId === selected.id ? 'Saving…' : 'Save'}
+                      {savingId === selected.id ? 'Saving…' : 'Save Changes'}
                     </button>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                selected.caption ? <p className="lightbox-caption">{selected.caption}</p> : null
+              )}
             </div>
           </div>
         </div>
@@ -294,6 +324,22 @@ export default function GalleryClient({
 
         .lightbox-edit {
           margin-top: 24px;
+        }
+
+        .caption-editor {
+          width: 100%;
+          min-width: 0;
+          padding: 12px 14px;
+          border-radius: 14px;
+          border: 1px solid #dbc8a8;
+          background: #fffdf9;
+          font-size: 14px;
+          resize: vertical;
+          font-family: inherit;
+        }
+        
+        .edit-actions {
+          margin-top: 14px;
         }
 
         .gallery-hero {
