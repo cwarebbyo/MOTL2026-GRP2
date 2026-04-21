@@ -66,7 +66,7 @@ export default function GalleryPage() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        setCurrentUserId(parsed.attendee_id || parsed.attendee_id || null)
+        setCurrentUserId(parsed.attendee_id || parsed.attendeeID || null)
       } catch {
         setCurrentUserId(null)
       }
@@ -140,7 +140,7 @@ export default function GalleryPage() {
     )
   }, [items, search])
 
-  async function savelocation_name(item: GalleryItem) {
+  async function saveLocationName(item: GalleryItem) {
     const nextValue = (draftLocations[item.id] || '').trim()
 
     setSavingId(item.id)
@@ -265,7 +265,7 @@ export default function GalleryPage() {
                         />
                         <button
                           className="save-button"
-                          onClick={() => savelocation_name(item)}
+                          onClick={() => saveLocationName(item)}
                           disabled={savingId === item.id}
                         >
                           {savingId === item.id ? 'Saving…' : 'Save'}
