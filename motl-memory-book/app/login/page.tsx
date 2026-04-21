@@ -25,24 +25,19 @@ export default function LoginPage() {
   
     const formattedDob = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
 
-    console.log({ lastName: lastName.trim(), formattedDob })
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lastName: lastName.trim(),
+        dob: formattedDob,
+      }),
+    })
     
-    const { data, error: queryError } = await supabase
-      .from('attendees')
-      .select('*')
-      .ilike('last_name', `%${lastName.trim()}%`)
-      .eq('dob', formattedDob)
-      .maybeSingle()
-
-    console.log({ queryError, data })
+    const json = await res.json()
     
-    if (queryError) {
-      setError(queryError.message)
-      return
-    }
-
-    if (!data) {
-      setError('Not found')
+    if (!res.ok) {
+      setError(json.error || 'Not found')
       return
     }
   
