@@ -449,6 +449,7 @@ export default function GalleryClient({
         .photo-card {
           display: flex;
           flex-direction: column;
+          height: 100%;
           overflow: hidden;
           border-radius: 28px;
           background: rgba(255, 255, 255, 0.88);
@@ -480,6 +481,7 @@ export default function GalleryClient({
           padding: 12px 16px;
           background: #fffaf2;
           border-top: 1px solid #eadcc1;
+          margin-top: auto;
         }
 
         .uploader-avatar {
@@ -525,6 +527,7 @@ export default function GalleryClient({
         }
 
         .photo-body {
+          flex: 1;
           padding: 18px 18px 20px 18px;
         }
 
