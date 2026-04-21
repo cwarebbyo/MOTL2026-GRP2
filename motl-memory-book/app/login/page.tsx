@@ -41,7 +41,7 @@ export default function LoginPage() {
       return
     }
   
-    localStorage.setItem('attendee', JSON.stringify(data))
+    localStorage.setItem('attendee', JSON.stringify(json.attendee))
     window.location.href = '/me'
   }
 
