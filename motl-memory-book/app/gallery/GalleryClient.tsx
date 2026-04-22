@@ -158,6 +158,11 @@ export default function GalleryClient({
     return map
   }, [attendees])
 
+  const currentUser = useMemo(
+    () => (currentUserId ? attendees.find((person) => person.attendee_id === currentUserId) || null : null),
+    [attendees, currentUserId]
+  )
+
   const items = useMemo<GalleryItem[]>(() => {
     return media
       .filter((item) => !item.is_profile_photo)
@@ -340,43 +345,44 @@ export default function GalleryClient({
     <div className="gallery-shell">
       <div className="gallery-hero header-card">
         <div className="header-main">
-          <div className="header-top">
-            <div className="hero-kicker">MOTL 2026 · Group 2</div>
-            <div className="header-actions">
-              {currentUserId ? (
-                <button
-                  className="header-action-button"
-                  onClick={() => router.push('/me')}
-                  type="button"
-                >
-                  My Profile
-                </button>
-              ) : (
-                <button
-                  className="header-action-button"
-                  onClick={() => {
-                    setLoginError('')
-                    setShowLoginModal(true)
-                  }}
-                  type="button"
-                >
-                  Login
-                </button>
-              )}
-            </div>
-          </div>
+          <div className="hero-kicker">MOTL 2026 · Group 2</div>
           <h1>Our Shared Experience</h1>
           <p>Browse each day to relive our experience in the way it originally unfolded.</p>
         </div>
 
-        <div className="header-stats">
-          <div className="hero-stat-card">
-            <span>{items.length}</span>
-            <small>Photos</small>
+        <div className="header-side">
+          <div className="header-action">
+            {currentUserId ? (
+              <button
+                className="header-action-button"
+                onClick={() => router.push('/me')}
+                type="button"
+              >
+                Welcome, {formatShortName(currentUser?.first_name, currentUser?.last_name)}
+              </button>
+            ) : (
+              <button
+                className="header-action-button"
+                onClick={() => {
+                  setLoginError('')
+                  setShowLoginModal(true)
+                }}
+                type="button"
+              >
+                Login
+              </button>
+            )}
           </div>
-          <div className="hero-stat-card">
-            <span>{new Set(items.map((i) => i.attendee_id)).size}</span>
-            <small>Contributors</small>
+
+          <div className="header-stats">
+            <div className="hero-stat-card">
+              <span>{items.length}</span>
+              <small>Photos</small>
+            </div>
+            <div className="hero-stat-card">
+              <span>{new Set(items.map((i) => i.attendee_id)).size}</span>
+              <small>Contributors</small>
+            </div>
           </div>
         </div>
       </div>
@@ -796,25 +802,31 @@ export default function GalleryClient({
         padding: 18px 20px;
       }
 
-      .header-top {
+      .header-side {
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 20px;
+        flex-direction: column;
+        gap: 16px;
+        justify-content: center;
       }
 
-      .header-actions {
-        flex-shrink: 0;
+      .header-action {
+        width: 100%;
       }
 
       .header-action-button {
+        width: 100%;
         border: 1px solid #d6c19a;
         background: #f7ecd7;
         color: #6b5430;
         border-radius: 16px;
-        padding: 12px 18px;
+        padding: 14px 16px;
         font-weight: 700;
         cursor: pointer;
+        text-align: center;
+      }
+
+      .header-action-button:hover {
+        background: #f1e3c5;
       }
     
       .hero-kicker,
@@ -1771,12 +1783,7 @@ export default function GalleryClient({
           padding: 14px;
         }
 
-        .header-top {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .header-actions {
+        .header-side {
           width: 100%;
         }
 
