@@ -47,6 +47,9 @@ export default function MePage() {
       attendee_id: attendee.attendee_id,
       email: attendee.email || '',
       phone: attendee.phone || '',
+      city: attendee.city || '',
+      state: attendee.state || '',
+      country: attendee.country || '',
       show_contact: !!attendee.show_contact,
       why_did_you_come: attendee.why_did_you_come || '',
       post_trip_reflection: attendee.post_trip_reflection || '',
@@ -71,9 +74,9 @@ export default function MePage() {
       localStorage.setItem('attendee', JSON.stringify(json.attendee))
       setAttendee(json.attendee)
       setMessage('Your profile has been updated.')
-      setSaving(false)
-    } catch (e) {
+    } catch {
       setMessage('Something went wrong while saving.')
+    } finally {
       setSaving(false)
     }
   }
@@ -88,17 +91,9 @@ export default function MePage() {
 
   return (
     <div className="me-shell">
-      <div className="me-book">
-        <div className="me-sidebar">
-          <div className="kicker">My Page</div>
-          <button
-            className="back-button"
-            onClick={() => router.push('/gallery')}
-            type="button"
-          >
-            ← Back to Gallery
-          </button>
-          <div className="portrait-wrap">
+      <div className="me-card">
+        <div className="me-top">
+          <div className="identity-block">
             {attendee.profile_photo_url ? (
               <img
                 src={attendee.profile_photo_url}
@@ -111,328 +106,320 @@ export default function MePage() {
                 {attendee.last_name?.charAt(0)}
               </div>
             )}
+
+            <div className="name-block">
+              <h1>
+                {attendee.first_name} {attendee.last_name}
+              </h1>
+            </div>
           </div>
 
-          <h1>
-            {attendee.first_name} {attendee.last_name}
-          </h1>
-          <p className="subline">
-            {[attendee.city, attendee.state, attendee.country].filter(Boolean).join(', ')}
-          </p>
-
-          <div className="sidebar-card">
-            <strong>What you can update here</strong>
-            <span>Email, phone, contact visibility, your profile photo link, why you came, and your reflection after the trip.</span>
-          </div>
-
-          <div className="sidebar-card">
-            <strong>What comes next</strong>
-            <span>Once this page is solid, we wire in profile photo upload and memory-photo uploads directly.</span>
-          </div>
+          <button
+            className="back-button"
+            onClick={() => router.push('/gallery')}
+            type="button"
+          >
+            ← Back to Gallery
+          </button>
         </div>
 
-        <div className="me-main">
-          <div className="form-card">
-            <h2>Your Information</h2>
-            <p className="form-subtitle">Make changes below, then save them to your memory book page.</p>
-
-            <div className="grid">
-              <div className="field">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={attendee.email || ''}
-                  onChange={(e) => setAttendee({ ...attendee, email: e.target.value })}
-                  placeholder="Email"
-                />
-              </div>
-
-              <div className="field">
-                <label>Phone</label>
-                <input
-                  type="text"
-                  value={attendee.phone || ''}
-                  onChange={(e) => setAttendee({ ...attendee, phone: e.target.value })}
-                  placeholder="Phone"
-                />
-              </div>
-            </div>
-
-            <div className="field checkbox-row">
+        <div className="form-shell">
+          <div className="grid two-up">
+            <div className="field">
+              <label>Email</label>
               <input
-                id="show-contact"
-                type="checkbox"
-                checked={!!attendee.show_contact}
-                onChange={(e) => setAttendee({ ...attendee, show_contact: e.target.checked })}
+                type="email"
+                value={attendee.email || ''}
+                onChange={(e) => setAttendee({ ...attendee, email: e.target.value })}
+                placeholder="Email"
               />
-              <label htmlFor="show-contact">Show my contact information to the group</label>
             </div>
 
             <div className="field">
-              <label>Profile Photo URL</label>
+              <label>Phone</label>
               <input
                 type="text"
-                value={attendee.profile_photo_url || ''}
-                onChange={(e) => setAttendee({ ...attendee, profile_photo_url: e.target.value })}
-                placeholder="Paste an image URL for now"
+                value={attendee.phone || ''}
+                onChange={(e) => setAttendee({ ...attendee, phone: e.target.value })}
+                placeholder="Phone"
               />
             </div>
-
-            <div className="field">
-              <label>Why did you come on the trip?</label>
-              <textarea
-                rows={6}
-                value={attendee.why_did_you_come || ''}
-                onChange={(e) => setAttendee({ ...attendee, why_did_you_come: e.target.value })}
-                placeholder="Share your reason for coming on the trip..."
-              />
-            </div>
-
-            <div className="field">
-              <label>Post-trip reflection</label>
-              <textarea
-                rows={8}
-                value={attendee.post_trip_reflection || ''}
-                onChange={(e) => setAttendee({ ...attendee, post_trip_reflection: e.target.value })}
-                placeholder="What are your reflections after the trip?"
-              />
-            </div>
-
-            {message ? <p className="message">{message}</p> : null}
-
-            <button className="save-button" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save My Page'}
-            </button>
           </div>
+
+          <div className="field checkbox-row">
+            <input
+              id="show-contact"
+              type="checkbox"
+              checked={!!attendee.show_contact}
+              onChange={(e) => setAttendee({ ...attendee, show_contact: e.target.checked })}
+            />
+            <label htmlFor="show-contact">Show my contact information to the group</label>
+          </div>
+
+          <div className="grid two-up compact-gap">
+            <div className="field">
+              <label>City</label>
+              <input
+                type="text"
+                value={attendee.city || ''}
+                onChange={(e) => setAttendee({ ...attendee, city: e.target.value })}
+                placeholder="City"
+              />
+            </div>
+
+            <div className="field">
+              <label>State/Province</label>
+              <input
+                type="text"
+                value={attendee.state || ''}
+                onChange={(e) => setAttendee({ ...attendee, state: e.target.value })}
+                placeholder="State or Province"
+              />
+            </div>
+          </div>
+
+          <div className="field country-field">
+            <label>Country</label>
+            <input
+              type="text"
+              value={attendee.country || ''}
+              onChange={(e) => setAttendee({ ...attendee, country: e.target.value })}
+              placeholder="Country"
+            />
+          </div>
+
+          <div className="field">
+            <label>Why did you come on the trip?</label>
+            <textarea
+              rows={5}
+              value={attendee.why_did_you_come || ''}
+              onChange={(e) => setAttendee({ ...attendee, why_did_you_come: e.target.value })}
+              placeholder="Share your reason for coming on the trip..."
+            />
+          </div>
+
+          <div className="field">
+            <label>Post-trip reflection</label>
+            <textarea
+              rows={5}
+              value={attendee.post_trip_reflection || ''}
+              onChange={(e) => setAttendee({ ...attendee, post_trip_reflection: e.target.value })}
+              placeholder="What are your reflections after the trip?"
+            />
+          </div>
+
+          {message ? <p className="message">{message}</p> : null}
+
+          <button className="save-button" onClick={handleSave} disabled={saving} type="button">
+            {saving ? 'Saving…' : 'Save My Profile'}
+          </button>
         </div>
       </div>
 
       <style jsx>{`
         .me-shell {
           min-height: 100vh;
-          padding: 24px;
+          padding: 12px;
           background:
             radial-gradient(circle at top, rgba(255, 248, 235, 0.95), rgba(244, 237, 225, 0.98) 35%, #efe6d7 100%);
           color: #231a12;
         }
 
-        .me-book {
+        .me-card {
           width: 100%;
-          max-width: 1240px;
+          max-width: 1040px;
           margin: 0 auto;
-          display: grid;
-          grid-template-columns: 0.9fr 1.1fr;
-          gap: 24px;
-          align-items: stretch;
-        }
-
-        .me-sidebar,
-        .me-main {
-          border-radius: 32px;
+          border-radius: 36px;
           background: rgba(255, 255, 255, 0.82);
           backdrop-filter: blur(12px);
           box-shadow: 0 24px 55px rgba(63, 46, 22, 0.12);
           border: 1px solid rgba(112, 89, 48, 0.12);
+          padding: 28px 30px;
         }
 
-        .me-sidebar {
-          padding: 32px;
+        .me-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 22px;
         }
 
-        .kicker {
-          display: inline-block;
-          width: fit-content;
-          font-size: 12px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          font-weight: 700;
-          color: #8a6a34;
-          background: #f9efdb;
-          padding: 8px 12px;
-          border-radius: 999px;
+        .identity-block {
+          display: flex;
+          align-items: flex-end;
+          gap: 24px;
+          min-width: 0;
+        }
+
+        .portrait,
+        .portrait-fallback {
+          width: 250px;
+          height: 250px;
+          border-radius: 28px;
+          object-fit: cover;
+          background: #e9dbc2;
+          box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+          flex-shrink: 0;
+        }
+
+        .portrait-fallback {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 64px;
+          font-weight: 800;
+          color: #7a643e;
+        }
+
+        .name-block {
+          min-width: 0;
+          padding-bottom: 10px;
+        }
+
+        .name-block h1 {
+          margin: 0;
+          font-size: clamp(48px, 6vw, 74px);
+          line-height: 0.95;
+          letter-spacing: -0.05em;
+          font-weight: 800;
+          color: #23160f;
         }
 
         .back-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          margin-top: 14px;
-          padding: 12px 16px;
-          border: 1px solid #d6c19a;
-          border-radius: 16px;
-          background: #f7ecd7;
-          color: #6b5430;
+          flex-shrink: 0;
+          padding: 16px 24px;
+          border: 1px solid #ccb27a;
+          border-radius: 22px;
+          background: #f6ecd7;
+          color: #7b6033;
           font-size: 14px;
           font-weight: 700;
           cursor: pointer;
         }
 
         .back-button:hover {
-          background: #f1e3c5;
+          background: #f2e3c0;
         }
 
-        .portrait-wrap {
-          margin-top: 20px;
-        }
-
-        .portrait,
-        .portrait-fallback {
-          width: 180px;
-          height: 180px;
-          border-radius: 28px;
-          object-fit: cover;
-          background: #e9dbc2;
-          box-shadow: 0 12px 26px rgba(0,0,0,0.12);
-        }
-
-        .portrait-fallback {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 48px;
-          font-weight: 800;
-          color: #5e4b33;
-        }
-
-        .me-sidebar h1 {
-          margin: 20px 0 8px 0;
-          font-size: 42px;
-          line-height: 1;
-          letter-spacing: -0.04em;
-        }
-
-        .subline {
-          margin: 0 0 22px 0;
-          color: #5f5144;
-          line-height: 1.7;
-        }
-
-        .sidebar-card {
-          margin-top: 14px;
-          background: #fbf5ea;
+        .form-shell {
+          border-radius: 32px;
+          background: rgba(253, 249, 241, 0.9);
           border: 1px solid #eadcc1;
-          border-radius: 20px;
-          padding: 18px 20px;
-        }
-
-        .sidebar-card strong {
-          display: block;
-          font-size: 16px;
-        }
-
-        .sidebar-card span {
-          display: block;
-          margin-top: 6px;
-          color: #695a4b;
-          line-height: 1.6;
-        }
-
-        .me-main {
-          padding: 18px;
-        }
-
-        .form-card {
-          width: 100%;
-          border-radius: 28px;
-          background: linear-gradient(180deg, #fffdfa 0%, #f9f2e6 100%);
-          border: 1px solid #eadcc1;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
-          padding: 32px;
-        }
-
-        .form-card h2 {
-          margin: 0;
-          font-size: 32px;
-          line-height: 1.1;
-          letter-spacing: -0.04em;
-        }
-
-        .form-subtitle {
-          margin: 10px 0 0 0;
-          color: #6d5d4d;
-          line-height: 1.7;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 14px 30px rgba(63, 46, 22, 0.06);
+          padding: 28px 42px 40px;
         }
 
         .grid {
           display: grid;
+          gap: 22px;
+        }
+
+        .two-up {
           grid-template-columns: 1fr 1fr;
-          gap: 16px;
-          margin-top: 20px;
+        }
+
+        .compact-gap {
+          gap: 22px;
         }
 
         .field {
-          margin-top: 20px;
+          margin-top: 18px;
+        }
+
+        .field:first-child {
+          margin-top: 0;
         }
 
         .field label {
           display: block;
-          margin-bottom: 8px;
-          font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.08em;
+          margin-bottom: 10px;
+          font-size: 12px;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
-          color: #745f3a;
+          font-weight: 800;
+          color: #8a6a34;
         }
 
         .field input,
         .field textarea {
           width: 100%;
-          padding: 16px 18px;
-          border-radius: 18px;
-          border: 1px solid #d7c6a8;
-          background: #fffdf8;
+          box-sizing: border-box;
+          padding: 16px 24px;
+          border-radius: 22px;
+          border: 1px solid #d9c29a;
+          background: #fffefb;
           font-size: 16px;
+          line-height: 1.45;
           color: #231a12;
           outline: none;
-          box-sizing: border-box;
+          font-family: inherit;
         }
 
-        .field input:focus,
-        .field textarea:focus {
-          border-color: #b78b43;
-          box-shadow: 0 0 0 3px rgba(183, 139, 67, 0.12);
+        .field input::placeholder,
+        .field textarea::placeholder {
+          color: #a5a1a0;
+        }
+
+        .field textarea {
+          resize: vertical;
+          min-height: 190px;
         }
 
         .checkbox-row {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
           margin-top: 22px;
         }
 
         .checkbox-row input {
-          width: 18px;
-          height: 18px;
+          width: 24px;
+          height: 24px;
           margin: 0;
+          accent-color: #2c7ef7;
+          flex-shrink: 0;
         }
 
         .checkbox-row label {
           margin: 0;
-          font-size: 15px;
-          font-weight: 600;
           letter-spacing: 0;
           text-transform: none;
-          color: #4c4034;
+          font-size: 16px;
+          font-weight: 700;
+          color: #4d4032;
+        }
+
+        .country-field {
+          max-width: calc(50% - 11px);
         }
 
         .message {
-          margin-top: 16px;
+          margin: 20px 0 0 0;
           color: #355f32;
+          font-size: 14px;
           font-weight: 600;
         }
 
         .save-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           width: 100%;
-          margin-top: 24px;
+          min-height: 72px;
+          margin-top: 26px;
+          padding: 18px 20px;
           border: none;
-          border-radius: 18px;
-          padding: 16px 18px;
-          background: #231a12;
+          border-radius: 26px;
+          background: linear-gradient(90deg, #2a190d 0%, #1d1008 100%);
           color: white;
-          font-size: 17px;
-          font-weight: 700;
+          font-size: 26px;
+          font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 10px 24px rgba(35, 26, 18, 0.18);
+          box-shadow: 0 16px 30px rgba(38, 22, 10, 0.18);
         }
 
         .save-button:disabled {
@@ -441,39 +428,80 @@ export default function MePage() {
         }
 
         @media (max-width: 980px) {
-          .me-book {
+          .me-card {
+            padding: 22px;
+          }
+
+          .me-top {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .identity-block {
+            align-items: center;
+          }
+
+          .back-button {
+            width: 100%;
+          }
+
+          .form-shell {
+            padding: 24px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .identity-block {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .portrait,
+          .portrait-fallback {
+            width: 180px;
+            height: 180px;
+          }
+
+          .two-up {
             grid-template-columns: 1fr;
+          }
+
+          .country-field {
+            max-width: 100%;
+          }
+
+          .field textarea {
+            min-height: 150px;
+          }
+
+          .save-button {
+            min-height: 60px;
+            font-size: 22px;
           }
         }
 
         @media (max-width: 640px) {
           .me-shell {
-            padding: 14px;
+            padding: 10px;
           }
 
-          .me-sidebar,
-          .me-main,
-          .form-card {
+          .me-card,
+          .form-shell {
             border-radius: 24px;
           }
 
-          .form-card {
-            padding: 24px;
+          .form-shell {
+            padding: 18px;
           }
 
-          .grid {
-            grid-template-columns: 1fr;
+          .field input,
+          .field textarea {
+            padding: 14px 18px;
+            border-radius: 18px;
           }
 
-          .portrait,
-          .portrait-fallback {
-            width: 140px;
-            height: 140px;
-            border-radius: 22px;
-          }
-
-          .me-sidebar h1 {
-            font-size: 34px;
+          .name-block h1 {
+            font-size: 48px;
           }
         }
       `}</style>
