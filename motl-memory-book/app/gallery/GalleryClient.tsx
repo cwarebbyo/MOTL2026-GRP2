@@ -2156,18 +2156,18 @@ export default function GalleryClient({
         z-index: 2;
       }
     
-      @media (min-width: 1200px) {
+      @media (min-width: 1101px) {
         .fixed-book-height {
           min-height: 1725px;
           height: auto;
         }
       }
-    
+      
       @media (max-width: 1199px) {
         .gallery-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-    
+      
         .fixed-book-height {
           height: auto;
         }
