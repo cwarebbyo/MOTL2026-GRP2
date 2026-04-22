@@ -70,10 +70,11 @@ export default function MePage() {
         body: formData,
       })
 
-      const json = await res.json()
+      const contentType = res.headers.get('content-type') || ''
+      const json = contentType.includes('application/json') ? await res.json() : null
 
       if (!res.ok) {
-        setPhotoError(json.error || 'Could not upload photo.')
+        setPhotoError(json?.error || `Upload failed with status ${res.status}.`)
         return
       }
 
@@ -187,8 +188,8 @@ export default function MePage() {
         </div>
 
         <div className="form-shell">
-          <div className="grid two-up">
-            <div className="field">
+          <div className="profile-grid">
+            <div className="field-group">
               <label>Email</label>
               <input
                 type="email"
@@ -198,7 +199,7 @@ export default function MePage() {
               />
             </div>
 
-            <div className="field">
+            <div className="field-group">
               <label>Phone</label>
               <input
                 type="text"
@@ -207,20 +208,20 @@ export default function MePage() {
                 placeholder="Phone"
               />
             </div>
-          </div>
 
-          <div className="field checkbox-row">
-            <input
-              id="show-contact"
-              type="checkbox"
-              checked={!!attendee.show_contact}
-              onChange={(e) => setAttendee({ ...attendee, show_contact: e.target.checked })}
-            />
-            <label htmlFor="show-contact">Show my contact information to the group</label>
-          </div>
+            <div className="toggle-row">
+              <label className="checkbox-row" htmlFor="show-contact">
+                <input
+                  id="show-contact"
+                  type="checkbox"
+                  checked={!!attendee.show_contact}
+                  onChange={(e) => setAttendee({ ...attendee, show_contact: e.target.checked })}
+                />
+                <span>Show my contact information to the group</span>
+              </label>
+            </div>
 
-          <div className="grid two-up compact-gap">
-            <div className="field">
+            <div className="field-group">
               <label>City</label>
               <input
                 type="text"
@@ -230,7 +231,7 @@ export default function MePage() {
               />
             </div>
 
-            <div className="field">
+            <div className="field-group">
               <label>State/Province</label>
               <input
                 type="text"
@@ -239,36 +240,36 @@ export default function MePage() {
                 placeholder="State or Province"
               />
             </div>
-          </div>
 
-          <div className="field country-field">
-            <label>Country</label>
-            <input
-              type="text"
-              value={attendee.country || ''}
-              onChange={(e) => setAttendee({ ...attendee, country: e.target.value })}
-              placeholder="Country"
-            />
-          </div>
+            <div className="field-group field-group-full">
+              <label>Country</label>
+              <input
+                type="text"
+                value={attendee.country || ''}
+                onChange={(e) => setAttendee({ ...attendee, country: e.target.value })}
+                placeholder="Country"
+              />
+            </div>
 
-          <div className="field">
-            <label>Why did you come on the trip?</label>
-            <textarea
-              rows={5}
-              value={attendee.why_did_you_come || ''}
-              onChange={(e) => setAttendee({ ...attendee, why_did_you_come: e.target.value })}
-              placeholder="Share your reason for coming on the trip..."
-            />
-          </div>
+            <div className="field-group field-group-full">
+              <label>Why did you come on the trip?</label>
+              <textarea
+                rows={5}
+                value={attendee.why_did_you_come || ''}
+                onChange={(e) => setAttendee({ ...attendee, why_did_you_come: e.target.value })}
+                placeholder="Share your reason for coming on the trip..."
+              />
+            </div>
 
-          <div className="field">
-            <label>Post-trip reflection</label>
-            <textarea
-              rows={5}
-              value={attendee.post_trip_reflection || ''}
-              onChange={(e) => setAttendee({ ...attendee, post_trip_reflection: e.target.value })}
-              placeholder="What are your reflections after the trip?"
-            />
+            <div className="field-group field-group-full">
+              <label>Post-trip reflection</label>
+              <textarea
+                rows={5}
+                value={attendee.post_trip_reflection || ''}
+                onChange={(e) => setAttendee({ ...attendee, post_trip_reflection: e.target.value })}
+                placeholder="What are your reflections after the trip?"
+              />
+            </div>
           </div>
 
           {message ? <p className="message">{message}</p> : null}
@@ -460,33 +461,29 @@ export default function MePage() {
           background: rgba(253, 249, 241, 0.9);
           border: 1px solid #eadcc1;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 14px 30px rgba(63, 46, 22, 0.06);
-          padding: 28px 42px 40px;
+          padding: 28px 38px 40px;
         }
 
-        .grid {
+        .profile-grid {
           display: grid;
-          gap: 22px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 22px 20px;
+          align-items: start;
         }
 
-        .two-up {
-          grid-template-columns: 1fr 1fr;
+        .field-group {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
         }
 
-        .compact-gap {
-          gap: 22px;
+        .field-group-full {
+          grid-column: 1 / -1;
         }
 
-        .field {
-          margin-top: 18px;
-        }
-
-        .field:first-child {
-          margin-top: 0;
-        }
-
-        .field label {
+        .field-group label {
           display: block;
-          margin-bottom: 10px;
+          margin: 0 0 10px 0;
           font-size: 12px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
@@ -494,8 +491,8 @@ export default function MePage() {
           color: #8a6a34;
         }
 
-        .field input,
-        .field textarea {
+        .field-group input,
+        .field-group textarea {
           width: 100%;
           box-sizing: border-box;
           padding: 16px 24px;
@@ -509,21 +506,28 @@ export default function MePage() {
           font-family: inherit;
         }
 
-        .field input::placeholder,
-        .field textarea::placeholder {
+        .field-group input::placeholder,
+        .field-group textarea::placeholder {
           color: #a5a1a0;
         }
 
-        .field textarea {
+        .field-group textarea {
           resize: vertical;
           min-height: 190px;
         }
 
-        .checkbox-row {
+        .toggle-row {
+          grid-column: 1 / -1;
           display: flex;
           align-items: center;
+          margin: -2px 0 -4px 0;
+        }
+
+        .checkbox-row {
+          display: inline-flex;
+          align-items: center;
           gap: 14px;
-          margin-top: 22px;
+          cursor: pointer;
         }
 
         .checkbox-row input {
@@ -534,17 +538,10 @@ export default function MePage() {
           flex-shrink: 0;
         }
 
-        .checkbox-row label {
-          margin: 0;
-          letter-spacing: 0;
-          text-transform: none;
+        .checkbox-row span {
           font-size: 16px;
           font-weight: 700;
           color: #4d4032;
-        }
-
-        .country-field {
-          max-width: calc(50% - 11px);
         }
 
         .message {
@@ -725,6 +722,17 @@ export default function MePage() {
           }
         }
 
+        @media (max-width: 820px) {
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .field-group-full,
+          .toggle-row {
+            grid-column: auto;
+          }
+        }
+
         @media (max-width: 760px) {
           .identity-block {
             flex-direction: column;
@@ -738,15 +746,7 @@ export default function MePage() {
             height: 180px;
           }
 
-          .two-up {
-            grid-template-columns: 1fr;
-          }
-
-          .country-field {
-            max-width: 100%;
-          }
-
-          .field textarea {
+          .field-group textarea {
             min-height: 150px;
           }
 
@@ -757,33 +757,6 @@ export default function MePage() {
 
           .photo-actions {
             flex-direction: column;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .me-shell {
-            padding: 10px;
-          }
-
-          .me-card,
-          .form-shell,
-          .photo-panel {
-            border-radius: 24px;
-          }
-
-          .form-shell,
-          .photo-panel {
-            padding: 18px;
-          }
-
-          .field input,
-          .field textarea {
-            padding: 14px 18px;
-            border-radius: 18px;
-          }
-
-          .name-block h1 {
-            font-size: 48px;
           }
         }
       `}</style>
