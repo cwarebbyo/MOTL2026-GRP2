@@ -426,8 +426,8 @@ export default function GalleryClient({
                   )}
                 </button>
                 <div>
-                  <strong>{selected.uploaderName}</strong>
-                  <span>Shared by {selected.uploaderShortName}</span>
+                  <strong>{selected.uploaderShortName}</strong>
+                  <span>Uploaded this photo</span>
                 </div>
               </div>
 
@@ -491,7 +491,7 @@ export default function GalleryClient({
               ×
             </button>
 
-            <div className="person-kicker">Contributor</div>
+            <div className="person-kicker">{selectedPerson.role}</div>
 
             <div className="person-top">
               {selectedPerson.profile_photo_url ? (
@@ -509,7 +509,6 @@ export default function GalleryClient({
               <div>
                 <h2>{formatLongName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
                 <p className="person-location">{personLocation(selectedPerson) || 'Location not shared'}</p>
-                {selectedPerson.role ? <p className="person-role">{selectedPerson.role}</p> : null}
               </div>
             </div>
 
