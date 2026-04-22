@@ -394,8 +394,6 @@ export default function GalleryClient({
               </div>
             ) : (
               <div className="book-pages fixed-book-height">
-                <div className="book-gutter" />
-
                 <div className="book-pages-content">
                   <div className="book-toolbar">
                     <div>
@@ -960,18 +958,6 @@ export default function GalleryClient({
         .book-pages {
           overflow: visible;
           background: linear-gradient(90deg, #f4ead8 0%, #fffdf9 12%, #fffdf9 88%, #f4ead8 100%);
-        }
-
-        .book-gutter {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          left: 50%;
-          width: 90px;
-          transform: translateX(-50%);
-          background: radial-gradient(circle at center, rgba(182, 145, 86, 0.16), rgba(182, 145, 86, 0.03) 55%, transparent 72%);
-          z-index: 0;
-          pointer-events: none;
         }
 
         .book-pages-content {
