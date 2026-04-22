@@ -228,17 +228,29 @@ export default function GalleryClient({
               </div>
 
               <div className="uploader-badge">
-               <button
-                className="avatar-button"
-                onClick={(e) => openPerson(item.uploader, e)}
-                aria-label={`Open ${item.uploaderName}'s profile`}
-              >
-                {item.uploaderAvatar ? (
-                  <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
-                ) : (
-                  <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
-                )}
-              </button>
+                <button
+                  className="avatar-button"
+                  onClick={(e) => openPerson(item.uploader, e)}
+                  aria-label={`Open ${item.uploaderName}'s profile`}
+                  type="button"
+                >
+                  {item.uploaderAvatar ? (
+                    <img
+                      src={item.uploaderAvatar}
+                      alt={item.uploaderName}
+                      className="uploader-avatar"
+                    />
+                  ) : (
+                    <div className="uploader-avatar fallback">
+                      {item.uploaderShortName.charAt(0)}
+                    </div>
+                  )}
+                </button>
+              
+                <div className="uploader-meta">
+                  <strong>{item.uploaderShortName}</strong>
+                  <span>Uploaded this photo</span>
+                </div>
               </div>
             </article>
           )
@@ -266,6 +278,7 @@ export default function GalleryClient({
                   className="avatar-button large"
                   onClick={(e) => openPerson(selected.uploader, e)}
                   aria-label={`Open ${selected.uploaderName}'s profile`}
+                  type="button"
                 >
                   {selected.uploaderAvatar ? (
                     <img
@@ -279,6 +292,11 @@ export default function GalleryClient({
                     </div>
                   )}
                 </button>
+              
+                <div>
+                  <strong>{selected.uploaderName}</strong>
+                  <span>Shared by {selected.uploaderShortName}</span>
+                </div>
               </div>
 
               <h2>{selected.location_name || 'Unnamed location'}</h2>
@@ -340,13 +358,13 @@ export default function GalleryClient({
               ×
             </button>
       
-            <div className="person-kicker">Contributor</div>
+            <div className="person-kicker">{selectedPerson.role}</div>
       
             <div className="person-top">
               {selectedPerson.profile_photo_url ? (
                 <img
                   src={selectedPerson.profile_photo_url}
-                  alt={formatLongName(selectedPerson.first_name, selectedPerson.last_name)}
+                  alt={formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}
                   className="person-avatar"
                 />
               ) : (
@@ -356,7 +374,7 @@ export default function GalleryClient({
               )}
       
               <div>
-                <h2>{formatLongName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
+                <h2>formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)</h2>
                 <p className="person-location">
                   {[selectedPerson.city, selectedPerson.state, selectedPerson.country]
                     .filter(Boolean)
@@ -368,12 +386,12 @@ export default function GalleryClient({
       
             <div className="person-section">
               <h3>About this traveler</h3>
-              <p>{selectedPerson.why_did_you_come || 'No “why I came” response has been added yet.'}</p>
+              <p>{selectedPerson.why_did_you_come || 'This has not been submitted yet.'}</p>
             </div>
       
             <div className="person-section">
               <h3>Post-trip reflection</h3>
-              <p>{selectedPerson.post_trip_reflection || 'No reflection has been added yet.'}</p>
+              <p>{selectedPerson.post_trip_reflection || 'This has not been submitted yet.'}</p>
             </div>
       
             <div className="person-section">
@@ -412,12 +430,15 @@ export default function GalleryClient({
 
         .avatar-button {
           display: inline-flex;
+          align-items: center;
+          justify-content: center;
           padding: 0;
           margin: 0;
           border: none;
           background: transparent;
           cursor: pointer;
           border-radius: 16px;
+          flex-shrink: 0;
         }
         
         .avatar-button.large {
