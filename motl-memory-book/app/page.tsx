@@ -1,11 +1,5 @@
-import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
-export default function Home() {
-  return (
-    <div>
-      <h1>MOTL 2026 – Group 2 Memory Book</h1>
-      <Link href="/login">Login</Link><br/>
-      <Link href="/gallery">View Gallery</Link>
-    </div>
-  )
+export default function HomePage() {
+  redirect('/gallery')
 }
