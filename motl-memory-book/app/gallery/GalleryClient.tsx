@@ -27,6 +27,7 @@ type GalleryItem = MediaRow & {
   uploaderName: string
   uploaderShortName: string
   uploaderAvatar: string | null
+  uploader: AttendeeRow | null
 }
 
 function formatShortName(firstName?: string, lastName?: string) {
@@ -60,6 +61,7 @@ export default function GalleryClient({
 }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<GalleryItem | null>(null)
+  const [selectedPerson, setSelectedPerson] = useState<AttendeeRow | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [draftLocations, setDraftLocations] = useState<Record<string, string>>({})
   const [draftCaptions, setDraftCaptions] = useState<Record<string, string>>({})
@@ -88,12 +90,13 @@ export default function GalleryClient({
     return media
       .filter((item) => !item.is_profile_photo)
       .map((item) => {
-        const person = attendeeMap.get(item.attendee_id)
+        const person = attendeeMap.get(item.attendee_id) || null
         return {
           ...item,
           uploaderName: formatLongName(person?.first_name, person?.last_name),
           uploaderShortName: formatShortName(person?.first_name, person?.last_name),
           uploaderAvatar: person?.profile_photo_url || null,
+          uploader: person,
         }
       })
   }, [media, attendeeMap])
@@ -153,6 +156,12 @@ export default function GalleryClient({
     setSaveMessage('Photo details updated.')
   }
 
+  function openPerson(person: AttendeeRow | null, e?: React.MouseEvent) {
+    if (e) e.stopPropagation()
+    if (!person) return
+    setSelectedPerson(person)
+  }
+
   return (
     <div className="gallery-shell">
       <div className="gallery-hero">
@@ -210,15 +219,17 @@ export default function GalleryClient({
               </div>
 
               <div className="uploader-badge">
+               <button
+                className="avatar-button"
+                onClick={(e) => openPerson(item.uploader, e)}
+                aria-label={`Open ${item.uploaderName}'s profile`}
+              >
                 {item.uploaderAvatar ? (
                   <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
                 ) : (
                   <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
                 )}
-                <div className="uploader-meta">
-                  <strong>{item.uploaderShortName}</strong>
-                  <span>Uploaded this photo</span>
-                </div>
+              </button>
               </div>
             </article>
           )
@@ -242,21 +253,23 @@ export default function GalleryClient({
 
             <div className="lightbox-info">
               <div className="lightbox-uploader">
-                {selected.uploaderAvatar ? (
-                  <img
-                    src={selected.uploaderAvatar}
-                    alt={selected.uploaderName}
-                    className="uploader-avatar large"
-                  />
-                ) : (
-                  <div className="uploader-avatar fallback large">
-                    {selected.uploaderShortName.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <strong>{selected.uploaderShortName}</strong>
-                  <span>Uploaded this photo</span>
-                </div>
+                <button
+                  className="avatar-button large"
+                  onClick={(e) => openPerson(selected.uploader, e)}
+                  aria-label={`Open ${selected.uploaderName}'s profile`}
+                >
+                  {selected.uploaderAvatar ? (
+                    <img
+                      src={selected.uploaderAvatar}
+                      alt={selected.uploaderName}
+                      className="uploader-avatar large"
+                    />
+                  ) : (
+                    <div className="uploader-avatar fallback large">
+                      {selected.uploaderShortName.charAt(0)}
+                    </div>
+                  )}
+                </button>
               </div>
 
               <h2>{selected.location_name || 'Unnamed location'}</h2>
@@ -311,6 +324,70 @@ export default function GalleryClient({
         </div>
       ) : null}
 
+      {selectedPerson ? (
+        <div className="person-lightbox" onClick={() => setSelectedPerson(null)}>
+          <div className="person-panel" onClick={(e) => e.stopPropagation()}>
+            <button className="close-button" onClick={() => setSelectedPerson(null)}>
+              ×
+            </button>
+      
+            <div className="person-kicker">Contributor</div>
+      
+            <div className="person-top">
+              {selectedPerson.profile_photo_url ? (
+                <img
+                  src={selectedPerson.profile_photo_url}
+                  alt={formatLongName(selectedPerson.first_name, selectedPerson.last_name)}
+                  className="person-avatar"
+                />
+              ) : (
+                <div className="person-avatar fallback">
+                  {formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}
+                </div>
+              )}
+      
+              <div>
+                <h2>{formatLongName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
+                <p className="person-location">
+                  {[selectedPerson.city, selectedPerson.state, selectedPerson.country]
+                    .filter(Boolean)
+                    .join(', ') || 'Location not shared'}
+                </p>
+                {selectedPerson.role ? <p className="person-role">{selectedPerson.role}</p> : null}
+              </div>
+            </div>
+      
+            <div className="person-section">
+              <h3>About this traveler</h3>
+              <p>{selectedPerson.why_did_you_come || 'No “why I came” response has been added yet.'}</p>
+            </div>
+      
+            <div className="person-section">
+              <h3>Post-trip reflection</h3>
+              <p>{selectedPerson.post_trip_reflection || 'No reflection has been added yet.'}</p>
+            </div>
+      
+            <div className="person-section">
+              <h3>Contact information</h3>
+              {selectedPerson.show_contact ? (
+                <div className="contact-grid">
+                  <div className="contact-card">
+                    <strong>Email</strong>
+                    <span>{selectedPerson.email || 'Not provided'}</span>
+                  </div>
+                  <div className="contact-card">
+                    <strong>Phone</strong>
+                    <span>{selectedPerson.phone || 'Not provided'}</span>
+                  </div>
+                </div>
+              ) : (
+                <p>This attendee has chosen not to share contact information in the gallery.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      
       <style jsx>{`
         .gallery-shell {
           min-height: 100vh;
@@ -324,6 +401,140 @@ export default function GalleryClient({
           margin-top: 24px;
         }
 
+        .avatar-button {
+          display: inline-flex;
+          padding: 0;
+          margin: 0;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          border-radius: 16px;
+        }
+        
+        .avatar-button.large {
+          border-radius: 20px;
+        }
+
+        .person-lightbox {
+          position: fixed;
+          inset: 0;
+          background: rgba(23, 18, 13, 0.7);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 22px;
+          z-index: 1000;
+        }
+        
+        .person-panel {
+          position: relative;
+          width: 100%;
+          max-width: 860px;
+          max-height: 90vh;
+          overflow: auto;
+          border-radius: 30px;
+          background: #fffdf9;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+          padding: 28px;
+        }
+        
+        .person-kicker {
+          display: inline-block;
+          font-size: 12px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: #8a6a34;
+          background: #f9efdb;
+          padding: 8px 12px;
+          border-radius: 999px;
+        }
+        
+        .person-top {
+          display: grid;
+          grid-template-columns: 120px 1fr;
+          gap: 20px;
+          align-items: center;
+          margin-top: 18px;
+        }
+        
+        .person-avatar {
+          width: 120px;
+          height: 120px;
+          border-radius: 28px;
+          object-fit: cover;
+          background: #e9dbc2;
+          box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+        }
+        
+        .person-avatar.fallback {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 32px;
+          font-weight: 800;
+          color: #5e4b33;
+        }
+        
+        .person-top h2 {
+          margin: 0;
+          font-size: 36px;
+          line-height: 1.05;
+          letter-spacing: -0.04em;
+        }
+        
+        .person-location,
+        .person-role {
+          margin: 8px 0 0 0;
+          color: #6b5b4b;
+          font-size: 16px;
+        }
+        
+        .person-section {
+          margin-top: 22px;
+          padding-top: 22px;
+          border-top: 1px solid #eadcc1;
+        }
+        
+        .person-section h3 {
+          margin: 0 0 10px 0;
+          font-size: 18px;
+        }
+        
+        .person-section p {
+          margin: 0;
+          color: #43382c;
+          line-height: 1.8;
+        }
+        
+        .contact-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+        
+        .contact-card {
+          background: #fbf5ea;
+          border: 1px solid #eadcc1;
+          border-radius: 18px;
+          padding: 16px;
+        }
+        
+        .contact-card strong {
+          display: block;
+          font-size: 13px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #7a643e;
+        }
+        
+        .contact-card span {
+          display: block;
+          margin-top: 6px;
+          line-height: 1.6;
+          color: #332a22;
+        }
         .caption-editor {
           width: 100%;
           min-width: 0;
@@ -752,6 +963,18 @@ export default function GalleryClient({
 
           .save-button {
             height: 46px;
+          }
+
+          .person-panel {
+            padding: 20px;
+          }
+          
+          .person-top {
+            grid-template-columns: 1fr;
+          }
+          
+          .contact-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
