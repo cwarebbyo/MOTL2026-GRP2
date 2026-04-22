@@ -413,7 +413,10 @@ export default function GalleryClient({
       
             <div className="person-section">
               <h3>Contact information</h3>
-              {selectedPerson.show_contact ? (
+            
+              {!currentUserId ? (
+                <p></p>
+              ) : selectedPerson.show_contact ? (
                 <div className="contact-grid">
                   <div className="contact-card">
                     <strong>Email</strong>
@@ -425,9 +428,10 @@ export default function GalleryClient({
                   </div>
                 </div>
               ) : (
-                <p>This attendee has chosen not to share contact information in the gallery.</p>
+                <p>This attendee has chosen not to share contact information.</p>
               )}
             </div>
+            
           </div>
         </div>
       ) : null}
