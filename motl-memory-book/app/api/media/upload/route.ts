@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     const insertPayload = {
       media_id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       attendee_id: attendeeId,
-      file_name: uploadedFile.name,
+      file_name: file.name,
       file_url: publicData.publicUrl,
       file_type: file.type || null,
       caption: null,
