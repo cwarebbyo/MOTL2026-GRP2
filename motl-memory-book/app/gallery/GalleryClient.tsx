@@ -108,7 +108,7 @@ function dedupeLocations(items: GalleryItem[]) {
   return Array.from(
     new Set(
       items
-        .map((value) => (item.location_text || '').trim())
+        .map((item) => (item.location_text || '').trim())
         .filter(Boolean)
     )
   )
