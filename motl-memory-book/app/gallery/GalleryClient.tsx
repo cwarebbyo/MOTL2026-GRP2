@@ -304,6 +304,11 @@ export default function GalleryClient({
         </div>
       
         <div className="header-stats">
+          {currentUserId ? (
+            <button onClick={() => router.push('/me')}>My Profile</button>
+          ) : (
+            <button onClick={() => router.push('/login')}>Login</button>
+          )}
           <div className="hero-stat-card">
             <span>{items.length}</span>
             <small>Photos</small>
