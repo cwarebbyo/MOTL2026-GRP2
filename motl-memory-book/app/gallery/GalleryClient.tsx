@@ -641,6 +641,27 @@ export default function GalleryClient({
           <div className="book-stack-shadow" />
 
           <div className="book-body">
+            <div className="tabs-select-wrap">
+              <label className="tabs-select-label" htmlFor="date-tab-select">Browse by date</label>
+              <div className="tabs-select-shell">
+                <select
+                  id="date-tab-select"
+                  className="tabs-select"
+                  value={selectedDateKey || ''}
+                  onChange={(e) => {
+                    setSelectedDateKey(e.target.value)
+                    setBookView('cover')
+                  }}
+                >
+                  {dateTabs.map((tab) => (
+                    <option key={tab.key} value={tab.key}>
+                      {tab.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="tabs-rail">
               <div className="date-tabs">
                 {dateTabs.map((tab) => {
@@ -1013,7 +1034,7 @@ export default function GalleryClient({
               )}
 
               {selected && canDeleteMedia(selected) ? (
-                <div className="delete-block"><br/><br/><br/><br/><br/><br/>
+                <div className="delete-block">
                   <button
                     className="delete-button"
                     onClick={() => handleDeleteMedia(selected)}
@@ -1307,6 +1328,58 @@ export default function GalleryClient({
         pointer-events: none;
       }
     
+      .tabs-select-wrap {
+        display: none;
+        margin-bottom: 16px;
+      }
+
+      .tabs-select-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #7b6545;
+      }
+
+      .tabs-select-shell {
+        position: relative;
+      }
+
+      .tabs-select-shell::after {
+        content: '▾';
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #7b6545;
+        font-size: 16px;
+        pointer-events: none;
+      }
+
+      .tabs-select {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        display: block;
+        box-sizing: border-box;
+        padding: 16px 44px 16px 18px;
+        border-radius: 18px;
+        border: 1px solid #d7c6a8;
+        background: #fffdf8;
+        color: #231a12;
+        font-size: 16px;
+        font-weight: 600;
+        outline: none;
+        box-shadow: 0 10px 24px rgba(59, 43, 21, 0.08);
+      }
+
+      .tabs-select:focus {
+        border-color: #b78b43;
+        box-shadow: 0 0 0 3px rgba(183, 139, 67, 0.12);
+      }
+
       .date-tabs {
         pointer-events: auto;
         display: flex;
@@ -2105,31 +2178,12 @@ export default function GalleryClient({
           padding-left: 0;
         }
     
+        .tabs-select-wrap {
+          display: block;
+        }
+
         .tabs-rail {
-          position: static;
-          width: 100%;
-          margin-bottom: 14px;
-        }
-    
-        .date-tabs {
-          flex-direction: row;
-          justify-content: flex-start;
-          align-items: stretch;
-          overflow-x: auto;
-          padding-bottom: 8px;
-        }
-    
-        .date-tab {
-          min-width: 180px;
-          width: 180px;
-          min-height: auto;
-          border-right: 1px solid #d9c8aa;
-          border-radius: 18px;
-        }
-    
-        .date-tab.active,
-        .date-tab:hover {
-          transform: none;
+          display: none;
         }
       }
     
