@@ -70,7 +70,13 @@ export default function GalleryClient({
 }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<GalleryItem | null>(null)
-  const [selectedPerson, setSelectedPerson] = useState<AttendeeRow | null>(null)
+  const [selectedPerson, setSelectedPerson] = useState<
+    (AttendeeRow & {
+      fullName: string
+      shortName: string
+      avatar: string | null
+    }) | null
+  >(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [draftLocations, setDraftLocations] = useState<Record<string, string>>({})
   const [draftCaptions, setDraftCaptions] = useState<Record<string, string>>({})
@@ -138,6 +144,17 @@ export default function GalleryClient({
     )
   }, [items, search])
 
+  function enrichPerson(person: AttendeeRow | null) {
+    if (!person) return null
+  
+    return {
+      ...person,
+      fullName: formatLongName(person.first_name, person.last_name),
+      shortName: formatShortName(person.first_name, person.last_name),
+      avatar: person.profile_photo_url || null,
+    }
+  }
+  
   async function savePhotoDetails(item: GalleryItem) {
     const nextLocation = (draftLocations[item.id] || '').trim()
     const nextCaption = (draftCaptions[item.id] || '').trim()
@@ -167,8 +184,9 @@ export default function GalleryClient({
 
   function openPerson(person: AttendeeRow | null, e?: React.MouseEvent) {
     if (e) e.stopPropagation()
-    if (!person) return
-    setSelectedPerson(person)
+    const enriched = enrichPerson(person)
+    if (!enriched) return
+    setSelectedPerson(enriched)
   }
 
   return (
@@ -364,23 +382,22 @@ export default function GalleryClient({
               {selectedPerson.profile_photo_url ? (
                 <img
                   src={selectedPerson.profile_photo_url}
-                  alt={formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}
+                  alt={selectedPerson.shortName}
                   className="person-avatar"
                 />
               ) : (
                 <div className="person-avatar fallback">
-                  {formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}
+                  {selectedPerson.shortName}
                 </div>
               )}
       
               <div>
-                <h2>{formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}</h2>
+                <h2>{selectedPerson.shortName}</h2>
                 <p className="person-location">
                   {[selectedPerson.city, selectedPerson.state, selectedPerson.country]
                     .filter(Boolean)
                     .join(', ') || 'Location not shared'}
                 </p>
-                {selectedPerson.role ? <p className="person-role">{selectedPerson.role}</p> : null}
               </div>
             </div>
       
