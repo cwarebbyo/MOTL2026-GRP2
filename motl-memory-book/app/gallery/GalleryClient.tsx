@@ -1374,8 +1374,6 @@ export default function GalleryClient({
         </div>
       ) : null}
 
-      ) : null}
-
     <style jsx>{`
       .gallery-shell {
         min-height: 100vh;
