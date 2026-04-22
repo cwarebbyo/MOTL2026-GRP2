@@ -731,11 +731,11 @@ export default function GalleryClient({
       }
     
       .hero-stat-card {
-        border-radius: 28px;
+        border-radius: 22px;
         background: #f7f0e2;
         border: 1px solid #e2d0aa;
-        padding: 22px 24px;
-        min-height: 118px;
+        padding: 14px 18px;
+        min-height: 84px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -743,7 +743,7 @@ export default function GalleryClient({
     
       .hero-stat-card span {
         display: block;
-        font-size: 44px;
+        font-size: 38px;
         line-height: 1;
         font-weight: 800;
         color: #23160f;
@@ -751,8 +751,8 @@ export default function GalleryClient({
     
       .hero-stat-card small {
         display: block;
-        margin-top: 8px;
-        font-size: 18px;
+        margin-top: 4px;
+        font-size: 16px;
         color: #665546;
       }
     
