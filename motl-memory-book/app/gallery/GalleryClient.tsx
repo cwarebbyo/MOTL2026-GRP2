@@ -1,4 +1,4 @@
-'use client'
+ 'use client'
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -196,7 +196,9 @@ export default function GalleryClient({
   const [search, setSearch] = useState('')
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [loginLastName, setLoginLastName] = useState('')
-  const [loginDob, setLoginDob] = useState('')
+  const [loginBirthMonth, setLoginBirthMonth] = useState('')
+  const [loginBirthDay, setLoginBirthDay] = useState('')
+  const [loginBirthYear, setLoginBirthYear] = useState('')
   const [loginError, setLoginError] = useState('')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [selected, setSelected] = useState<GalleryItem | null>(null)
@@ -389,13 +391,25 @@ export default function GalleryClient({
     setIsLoggingIn(true)
     setLoginError('')
 
+    if (
+      loginBirthMonth.length !== 2 ||
+      loginBirthDay.length !== 2 ||
+      loginBirthYear.length !== 4
+    ) {
+      setLoginError('Please enter your full date of birth as month, day, and year.')
+      setIsLoggingIn(false)
+      return
+    }
+
+    const dob = `${loginBirthYear.padStart(4, '0')}-${loginBirthMonth.padStart(2, '0')}-${loginBirthDay.padStart(2, '0')}`
+
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lastName: loginLastName,
-          dob: loginDob,
+          dob,
         }),
       })
 
@@ -410,7 +424,9 @@ export default function GalleryClient({
       setCurrentUserId(data.attendee.attendee_id)
       setShowLoginModal(false)
       setLoginLastName('')
-      setLoginDob('')
+      setLoginBirthMonth('')
+      setLoginBirthDay('')
+      setLoginBirthYear('')
       setLoginError('')
     } catch {
       setLoginError('Something went wrong. Please try again.')
@@ -887,12 +903,38 @@ export default function GalleryClient({
 
               <div className="login-field">
                 <label>Date of Birth</label>
-                <input
-                  type="date"
-                  value={loginDob}
-                  onChange={(e) => setLoginDob(e.target.value)}
-                  required
-                />
+                <div className="dob-grid">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={2}
+                    placeholder="MM"
+                    value={loginBirthMonth}
+                    onChange={(e) => setLoginBirthMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                    required
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={2}
+                    placeholder="DD"
+                    value={loginBirthDay}
+                    onChange={(e) => setLoginBirthDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                    required
+                  />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    placeholder="YYYY"
+                    value={loginBirthYear}
+                    onChange={(e) => setLoginBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    required
+                  />
+                </div>
               </div>
 
               {loginError ? <p className="login-error">{loginError}</p> : null}
