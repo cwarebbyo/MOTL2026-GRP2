@@ -330,9 +330,8 @@ export default function GalleryClient({
           <div className="book-pages">
             <div className="book-toolbar">
               <div>
-                <div className="book-date-kicker">Viewing Date</div>
                 <h3>{selectedDateKey ? displayDateFromKey(selectedDateKey) : 'Select a date'}</h3>
-                <p>{filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'} shown, oldest to newest</p>
+                <p>{filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'}</p>
               </div>
 
               <button
@@ -361,7 +360,7 @@ export default function GalleryClient({
                         <h3>{item.location_name || 'Unnamed location'}</h3>
                         <p>{item.location_text || 'Location unknown'}</p>
                       </div>
-                      <time>{formatDateTime(item.taken_at)}</time>
+                      <time>{formatDate(item.taken_at)}</time>
                     </div>
                   </div>
 
@@ -433,7 +432,7 @@ export default function GalleryClient({
 
               <h2>{selected.location_name || 'Unnamed location'}</h2>
               <p className="location-text">{selected.location_text || 'Location unknown'}</p>
-              <p className="date-text">{formatDateTime(selected.taken_at)}</p>
+              <p className="date-text">{formatDate(selected.taken_at)}</p>
 
               {currentUserId === selected.attendee_id ? (
                 <div className="edit-block lightbox-edit">
