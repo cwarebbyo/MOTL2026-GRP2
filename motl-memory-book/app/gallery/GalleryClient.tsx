@@ -411,26 +411,26 @@ export default function GalleryClient({
               <p>{selectedPerson.post_trip_reflection || 'This has not been submitted yet.'}</p>
             </div>
       
-            <div className="person-section">
-              <h3>Contact information</h3>
+            {currentUserId ? (
+              <div className="person-section">
+                <h3>Contact information</h3>
             
-              {!currentUserId ? (
-                <p></p>
-              ) : selectedPerson.show_contact ? (
-                <div className="contact-grid">
-                  <div className="contact-card">
-                    <strong>Email</strong>
-                    <span>{selectedPerson.email || 'Not provided'}</span>
+                {selectedPerson.show_contact ? (
+                  <div className="contact-grid">
+                    <div className="contact-card">
+                      <strong>Email</strong>
+                      <span>{selectedPerson.email || 'Not provided'}</span>
+                    </div>
+                    <div className="contact-card">
+                      <strong>Phone</strong>
+                      <span>{selectedPerson.phone || 'Not provided'}</span>
+                    </div>
                   </div>
-                  <div className="contact-card">
-                    <strong>Phone</strong>
-                    <span>{selectedPerson.phone || 'Not provided'}</span>
-                  </div>
-                </div>
-              ) : (
-                <p>This attendee has chosen not to share contact information.</p>
-              )}
-            </div>
+                ) : (
+                  <p>This attendee has chosen not to share contact information.</p>
+                )}
+              </div>
+            ) : null}
             
           </div>
         </div>
