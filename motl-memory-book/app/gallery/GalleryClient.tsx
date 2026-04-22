@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 type MediaRow = {
@@ -121,7 +122,13 @@ export default function GalleryClient({
   media: MediaRow[]
   attendees: AttendeeRow[]
 }) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [loginLastName, setLoginLastName] = useState('')
+  const [loginDob, setLoginDob] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [selected, setSelected] = useState<GalleryItem | null>(null)
   const [selectedPerson, setSelectedPerson] = useState<AttendeeRow | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -288,6 +295,41 @@ export default function GalleryClient({
     setSaveMessage('Photo details updated.')
   }
 
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setIsLoggingIn(true)
+    setLoginError('')
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lastName: loginLastName,
+          dob: loginDob,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setLoginError(data.error || 'Login failed.')
+        return
+      }
+
+      localStorage.setItem('attendee', JSON.stringify(data.attendee))
+      setCurrentUserId(data.attendee.attendee_id)
+      setShowLoginModal(false)
+      setLoginLastName('')
+      setLoginDob('')
+      setLoginError('')
+    } catch {
+      setLoginError('Something went wrong. Please try again.')
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
   function openPerson(person: AttendeeRow | null, e?: React.MouseEvent) {
     if (e) e.stopPropagation()
     if (!person) return
@@ -298,17 +340,36 @@ export default function GalleryClient({
     <div className="gallery-shell">
       <div className="gallery-hero header-card">
         <div className="header-main">
-          <div className="hero-kicker">MOTL 2026 · Group 2</div>
+          <div className="header-top">
+            <div className="hero-kicker">MOTL 2026 · Group 2</div>
+            <div className="header-actions">
+              {currentUserId ? (
+                <button
+                  className="header-action-button"
+                  onClick={() => router.push('/me')}
+                  type="button"
+                >
+                  My Profile
+                </button>
+              ) : (
+                <button
+                  className="header-action-button"
+                  onClick={() => {
+                    setLoginError('')
+                    setShowLoginModal(true)
+                  }}
+                  type="button"
+                >
+                  Login
+                </button>
+              )}
+            </div>
+          </div>
           <h1>Our Shared Experience</h1>
           <p>Browse each day to relive our experience in the way it originally unfolded.</p>
         </div>
-      
+
         <div className="header-stats">
-          {currentUserId ? (
-            <button onClick={() => router.push('/me')}>My Profile</button>
-          ) : (
-            <button onClick={() => router.push('/login')}>Login</button>
-          )}
           <div className="hero-stat-card">
             <span>{items.length}</span>
             <small>Photos</small>
@@ -499,6 +560,51 @@ export default function GalleryClient({
         </div>
       </div>
 
+      {showLoginModal ? (
+        <div className="person-lightbox" onClick={() => setShowLoginModal(false)}>
+          <div className="login-panel" onClick={(e) => e.stopPropagation()}>
+            <button className="close-button" onClick={() => setShowLoginModal(false)} type="button">
+              ×
+            </button>
+
+            <div className="person-kicker">Attendee Login</div>
+            <h2>Log in to your profile</h2>
+            <p className="login-helper">
+              Enter your last name and date of birth to access your profile.
+            </p>
+
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="login-field">
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  value={loginLastName}
+                  onChange={(e) => setLoginLastName(e.target.value)}
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
+
+              <div className="login-field">
+                <label>Date of Birth</label>
+                <input
+                  type="date"
+                  value={loginDob}
+                  onChange={(e) => setLoginDob(e.target.value)}
+                  required
+                />
+              </div>
+
+              {loginError ? <p className="login-error">{loginError}</p> : null}
+
+              <button className="save-button" type="submit" disabled={isLoggingIn}>
+                {isLoggingIn ? 'Logging in…' : 'Login'}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {selected ? (
         <div className="lightbox" onClick={() => setSelected(null)}>
           <div className="lightbox-panel" onClick={(e) => e.stopPropagation()}>
@@ -688,6 +794,27 @@ export default function GalleryClient({
         flex-direction: column;
         justify-content: center;
         padding: 18px 20px;
+      }
+
+      .header-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .header-actions {
+        flex-shrink: 0;
+      }
+
+      .header-action-button {
+        border: 1px solid #d6c19a;
+        background: #f7ecd7;
+        color: #6b5430;
+        border-radius: 16px;
+        padding: 12px 18px;
+        font-weight: 700;
+        cursor: pointer;
       }
     
       .hero-kicker,
@@ -1302,6 +1429,59 @@ export default function GalleryClient({
         padding: 14px 16px;
       }
     
+      .login-panel {
+        position: relative;
+        width: 100%;
+        max-width: 560px;
+        padding: 28px;
+        border-radius: 30px;
+        background: #fffdf9;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+      }
+
+      .login-panel h2 {
+        margin: 16px 0 8px 0;
+        font-size: 34px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .login-helper {
+        margin: 0 0 22px 0;
+        color: #6b5b4b;
+        line-height: 1.6;
+      }
+
+      .login-form {
+        display: grid;
+        gap: 16px;
+      }
+
+      .login-field label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #715d42;
+      }
+
+      .login-field input {
+        width: 100%;
+        min-width: 0;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid #dbc8a8;
+        background: #fffdf9;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      .login-error {
+        margin: 0;
+        color: #8b2f2f;
+        font-size: 14px;
+      }
+
       .lightbox,
       .person-lightbox {
         position: fixed;
@@ -1590,6 +1770,19 @@ export default function GalleryClient({
         .gallery-shell {
           padding: 14px;
         }
+
+        .header-top {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .header-actions {
+          width: 100%;
+        }
+
+        .header-action-button {
+          width: 100%;
+        }
     
         .gallery-hero.header-card,
         .photo-card,
@@ -1613,6 +1806,11 @@ export default function GalleryClient({
     
         .header-main p {
           font-size: 18px;
+        }
+
+        .login-panel {
+          padding: 20px;
+          border-radius: 22px;
         }
     
         .hero-stat-card span {
