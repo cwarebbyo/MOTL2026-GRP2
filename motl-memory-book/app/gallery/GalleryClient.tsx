@@ -227,6 +227,10 @@ export default function GalleryClient({
     setCurrentPage(1)
   }, [selectedDateKey, search])
 
+  useEffect(() => {
+    setSearch('')
+  }, [selectedDateKey])
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
 
@@ -303,16 +307,6 @@ export default function GalleryClient({
         </div>
 
         <div className="hero-panel">
-          <label className="search-label">Search</label>
-          <div className="search-input-wrap">
-            <input
-              className="search-input"
-              placeholder="Search by person, place, caption, or date"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              disabled={bookView !== 'pages'}
-            />
-          </div>
           <div className="hero-stats">
             <div>
               <span>{items.length}</span>
@@ -394,13 +388,26 @@ export default function GalleryClient({
               <div className="book-pages fixed-book-height">
                 <div className="book-pages-content">
                   <div className="book-toolbar">
-                    <div>
+                    <div className="toolbar-left">
                       <div className="book-date-kicker">Day View</div>
                       <h3>{selectedDateTab?.label || 'Select a date'}</h3>
                       <p>
                         {filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'}
                         {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ''}
                       </p>
+                    </div>
+
+                    <div className="toolbar-search">
+                      <label className="search-label">Search</label>
+                      <div className="search-input-wrap">
+                        <input
+                          className="search-input"
+                          placeholder="Search this day by person, place, caption, or date"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          type="text"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -664,6 +671,20 @@ export default function GalleryClient({
           gap: 20px;
           grid-template-columns: 1.35fr 0.9fr;
           align-items: stretch;
+        }
+
+        @media (max-width: 900px) {
+          .gallery-hero {
+            grid-template-columns: 1fr;
+          }
+
+          .book-toolbar {
+            flex-direction: column;
+          }
+
+          .toolbar-search {
+            width: 100%;
+          }
         }
 
         .hero-copy,
@@ -973,6 +994,26 @@ export default function GalleryClient({
           justify-content: space-between;
           gap: 20px;
           margin-bottom: 22px;
+        }
+
+        .toolbar-left {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .toolbar-search {
+          width: 360px;
+          max-width: 100%;
+          flex-shrink: 0;
+        }
+
+        .toolbar-search .search-label {
+          margin-bottom: 8px;
+        }
+
+        .toolbar-search .search-input-wrap,
+        .toolbar-search .search-input {
+          width: 100%;
         }
 
         .book-toolbar h3 {
