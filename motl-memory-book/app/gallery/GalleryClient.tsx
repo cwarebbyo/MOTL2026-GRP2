@@ -131,7 +131,7 @@ export default function GalleryClient({
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
-  const [bookOpen, setBookOpen] = useState(false)
+  const [bookView, setBookView] = useState<'cover' | 'pages'>('cover')
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
@@ -296,22 +296,21 @@ export default function GalleryClient({
       <div className="gallery-hero">
         <div className="hero-copy">
           <div className="hero-kicker">MOTL 2026 · Group 2</div>
-          <h1>Shared Memory Book</h1>
+          <h1>Our Shared Experience</h1>
           <p>
-            Open the book by date, browse each day in order, and move through the journey
-            the way it actually unfolded.
+            Browse each day to relive our experience in the way it originally unfolded.
           </p>
         </div>
 
         <div className="hero-panel">
-          <label className="search-label">Search the memory book</label>
+          <label className="search-label">Search</label>
           <div className="search-input-wrap">
             <input
               className="search-input"
               placeholder="Search by person, place, caption, or date"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              disabled={!bookOpen}
+              disabled={bookView !== 'pages'}
             />
           </div>
           <div className="hero-stats">
@@ -328,7 +327,7 @@ export default function GalleryClient({
         </div>
       </div>
 
-      <div className={`book-shell ${bookOpen ? 'open' : ''}`}>
+      <div className={`book-shell ${bookView === 'pages' ? 'open' : ''}`}>
         <div className="book-column">
           <div className="book-stack-shadow" />
 
@@ -343,7 +342,7 @@ export default function GalleryClient({
                       className={`date-tab ${selectedDateKey === tab.key ? 'active' : ''}`}
                       onClick={() => {
                         setSelectedDateKey(tab.key)
-                        setBookOpen(true)
+                        setBookView('cover')
                       }}
                       type="button"
                     >
@@ -355,7 +354,7 @@ export default function GalleryClient({
               </div>
             </div>
 
-            {!bookOpen ? (
+            {bookView === 'cover' ? (
               <div className="book-cover fixed-book-height">
                 <div className="cover-image-wrap">
                   {selectedDateTab?.coverPhoto ? (
@@ -369,7 +368,6 @@ export default function GalleryClient({
                 </div>
 
                 <div className="cover-content">
-                  <div className="cover-spine-mark">Memory Book</div>
                   <h2>{selectedDateTab?.label || 'MOTL 2026'}</h2>
                   {selectedDateTab?.locations?.length ? (
                     <div className="cover-locations">
@@ -384,7 +382,7 @@ export default function GalleryClient({
                     className="open-book-button"
                     onClick={() => {
                       if (!selectedDateKey && dateTabs.length) setSelectedDateKey(dateTabs[0].key)
-                      setBookOpen(true)
+                      setBookView('pages')
                     }}
                     type="button"
                   >
@@ -910,8 +908,8 @@ export default function GalleryClient({
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          justify-content: flex-end;
-          padding: 42px;
+          justify-content: flex-start;
+          padding: 52px 42px 42px 42px;
           color: white;
         }
 
@@ -937,13 +935,13 @@ export default function GalleryClient({
         }
 
         .cover-locations {
-          margin-top: 18px;
+          margin-top: 14px;
           display: grid;
           gap: 4px;
         }
 
         .open-book-button {
-          margin-top: 24px;
+          margin-top: 20px;
           border: 1px solid rgba(255, 255, 255, 0.24);
           border-radius: 16px;
           padding: 14px 18px;
