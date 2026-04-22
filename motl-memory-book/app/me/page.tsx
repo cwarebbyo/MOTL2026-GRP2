@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Attendee = {
   attendee_id: string
@@ -19,6 +20,7 @@ type Attendee = {
 }
 
 export default function MePage() {
+  const router = useRouter()
   const [attendee, setAttendee] = useState<Attendee | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -89,6 +91,13 @@ export default function MePage() {
       <div className="me-book">
         <div className="me-sidebar">
           <div className="kicker">My Page</div>
+          <button
+            className="back-button"
+            onClick={() => router.push('/gallery')}
+            type="button"
+          >
+            ← Back to Gallery
+          </button>
           <div className="portrait-wrap">
             {attendee.profile_photo_url ? (
               <img
@@ -241,6 +250,25 @@ export default function MePage() {
           background: #f9efdb;
           padding: 8px 12px;
           border-radius: 999px;
+        }
+
+        .back-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 14px;
+          padding: 12px 16px;
+          border: 1px solid #d6c19a;
+          border-radius: 16px;
+          background: #f7ecd7;
+          color: #6b5430;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .back-button:hover {
+          background: #f1e3c5;
         }
 
         .portrait-wrap {
