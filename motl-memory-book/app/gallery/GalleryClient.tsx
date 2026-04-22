@@ -21,6 +21,15 @@ type AttendeeRow = {
   first_name: string
   last_name: string
   profile_photo_url?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  show_contact?: boolean | null
+  email?: string | null
+  phone?: string | null
+  why_did_you_come?: string | null
+  post_trip_reflection?: string | null
+  role?: string | null
 }
 
 type GalleryItem = MediaRow & {
