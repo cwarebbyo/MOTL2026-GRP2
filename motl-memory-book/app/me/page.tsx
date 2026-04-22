@@ -402,6 +402,8 @@ export default function MePage() {
         .me-shell {
           min-height: 100vh;
           padding: 12px;
+          box-sizing: border-box;
+          overflow-x: hidden;
           background:
             radial-gradient(circle at top, rgba(255, 248, 235, 0.95), rgba(244, 237, 225, 0.98) 35%, #efe6d7 100%);
           color: #231a12;
@@ -409,6 +411,7 @@ export default function MePage() {
 
         .me-card {
           width: 100%;
+          box-sizing: border-box;
           max-width: 1040px;
           margin: 0 auto;
           border-radius: 36px;
@@ -429,6 +432,7 @@ export default function MePage() {
 
         .identity-block {
           display: flex;
+          width: 100%;
           align-items: flex-end;
           gap: 24px;
           min-width: 0;
@@ -494,11 +498,13 @@ export default function MePage() {
 
         .name-block {
           min-width: 0;
+          width: 100%;
           padding-bottom: 8px;
         }
 
         .name-block h1 {
           margin: 0;
+          word-break: break-word;
           font-size: clamp(34px, 6vw, 60px);
           line-height: 0.96;
           letter-spacing: -0.05em;
@@ -559,6 +565,7 @@ export default function MePage() {
         .field-group input,
         .field-group textarea {
           width: 100%;
+          min-width: 0;
           box-sizing: border-box;
           border: 1px solid #dbc8a8;
           background: #fffdf9;
@@ -755,37 +762,133 @@ export default function MePage() {
         }
 
         @media (max-width: 760px) {
+          .me-shell {
+            padding: 10px;
+          }
+
           .me-card {
-            padding: 20px;
+            padding: 18px;
             border-radius: 24px;
           }
 
           .me-top {
             flex-direction: column;
             align-items: stretch;
+            gap: 18px;
           }
 
           .identity-block {
             flex-direction: column;
-            align-items: flex-start;
-            gap: 18px;
+            align-items: stretch;
+            gap: 16px;
+          }
+
+          .portrait-button {
+            align-self: center;
           }
 
           .portrait,
           .portrait-fallback {
-            width: 200px;
-            height: 200px;
+            width: 180px;
+            height: 180px;
+          }
+
+          .back-button {
+            width: 100%;
           }
         }
 
         @media (max-width: 640px) {
-          .photo-panel {
-            padding: 20px;
+          .me-shell {
+            padding: 8px;
+          }
+
+          .me-card {
+            padding: 14px;
+            border-radius: 20px;
+          }
+
+          .identity-block {
+            gap: 14px;
+          }
+
+          .portrait,
+          .portrait-fallback {
+            width: 148px;
+            height: 148px;
             border-radius: 22px;
+          }
+
+          .portrait-button {
+            width: 148px;
+          }
+
+          .name-block {
+            padding-bottom: 0;
+          }
+
+          .name-block h1 {
+            font-size: clamp(28px, 10vw, 42px);
+            line-height: 1;
+          }
+
+          .field-group label {
+            margin-bottom: 8px;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+          }
+
+          .field-group input,
+          .field-group textarea {
+            border-radius: 16px;
+            padding: 14px 14px;
+            font-size: 16px;
+          }
+
+          .field-group textarea {
+            min-height: 110px;
+          }
+
+          .checkbox-row {
+            align-items: flex-start;
+            line-height: 1.4;
+          }
+
+          .photo-panel {
+            padding: 18px;
+            border-radius: 22px;
+            box-sizing: border-box;
           }
 
           .photo-actions {
             grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .me-shell {
+            padding: 6px;
+          }
+
+          .me-card {
+            padding: 12px;
+            border-radius: 18px;
+          }
+
+          .portrait,
+          .portrait-fallback {
+            width: 132px;
+            height: 132px;
+          }
+
+          .portrait-button {
+            width: 132px;
+          }
+
+          .back-button,
+          .save-button,
+          .secondary-button {
+            width: 100%;
           }
         }
       `}</style>
