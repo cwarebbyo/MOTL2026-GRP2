@@ -1007,15 +1007,24 @@ export default function GalleryClient({
                       {savingId === selected.id ? 'Saving…' : 'Save Changes'}
                     </button>
                   </div>
-                  {selected && canDeleteMedia(selected) ? (
-                    {/* delete moved */} : null}
                 </div>
               ) : (
                 selected.caption ? <p className="lightbox-caption">{selected.caption}</p> : null
               )}
 
               {selected && canDeleteMedia(selected) ? (
-                {/* delete moved */} : null}
+                <div className="delete-block">
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDeleteMedia(selected)}
+                    disabled={deletingId === selected.id}
+                    type="button"
+                  >
+                    {deletingId === selected.id ? 'Deleting…' : 'Delete from Memory Book'}
+                  </button>
+                  {deleteError ? <p className="delete-error">{deleteError}</p> : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -2252,21 +2261,6 @@ export default function GalleryClient({
         }
       }
     `}</style>
-    
-{selected && canDeleteMedia(selected) ? (
-  <div className="delete-block">
-    <button
-      className="delete-button"
-      onClick={() => handleDeleteMedia(selected)}
-      disabled={deletingId === selected.id}
-      type="button"
-    >
-      {deletingId === selected.id ? 'Deleting…' : 'Delete from Memory Book'}
-    </button>
-    {deleteError ? <p className="delete-error">{deleteError}</p> : null}
-  </div>
-) : null}
-
-</div>
+    </div>
   )
 }
