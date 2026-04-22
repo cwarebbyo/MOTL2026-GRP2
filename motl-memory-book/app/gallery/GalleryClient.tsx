@@ -294,8 +294,8 @@ export default function GalleryClient({
                 </button>
               
                 <div>
-                  <strong>{selected.uploaderName}</strong>
-                  <span>Shared by {selected.uploaderShortName}</span>
+                  <strong>{selected.uploaderShortName}</strong>
+                  <span>Uploaded this photo</span>
                 </div>
               </div>
 
@@ -374,7 +374,7 @@ export default function GalleryClient({
               )}
       
               <div>
-                <h2>formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)</h2>
+                <h2>{formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}</h2>
                 <p className="person-location">
                   {[selectedPerson.city, selectedPerson.state, selectedPerson.country]
                     .filter(Boolean)
