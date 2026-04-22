@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Attendee = {
@@ -21,10 +21,15 @@ type Attendee = {
 
 export default function MePage() {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [attendee, setAttendee] = useState<Attendee | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [showPhotoModal, setShowPhotoModal] = useState(false)
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoError, setPhotoError] = useState('')
 
   useEffect(() => {
     const stored = localStorage.getItem('attendee')
@@ -37,6 +42,51 @@ export default function MePage() {
     }
     setLoading(false)
   }, [])
+
+  function closePhotoModal() {
+    setShowPhotoModal(false)
+    setSelectedPhoto(null)
+    setPhotoError('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handlePhotoUpload() {
+    if (!attendee || !selectedPhoto) {
+      setPhotoError('Choose a photo first.')
+      return
+    }
+
+    setUploadingPhoto(true)
+    setPhotoError('')
+    setMessage('')
+
+    try {
+      const formData = new FormData()
+      formData.append('attendee_id', attendee.attendee_id)
+      formData.append('file', selectedPhoto)
+
+      const res = await fetch('/api/me/photo', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        setPhotoError(json.error || 'Could not upload photo.')
+        return
+      }
+
+      localStorage.setItem('attendee', JSON.stringify(json.attendee))
+      setAttendee(json.attendee)
+      setMessage('Your profile photo has been updated.')
+      closePhotoModal()
+    } catch {
+      setPhotoError('Something went wrong while uploading your photo.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
 
   async function handleSave() {
     if (!attendee) return
@@ -94,18 +144,31 @@ export default function MePage() {
       <div className="me-card">
         <div className="me-top">
           <div className="identity-block">
-            {attendee.profile_photo_url ? (
-              <img
-                src={attendee.profile_photo_url}
-                alt={`${attendee.first_name} ${attendee.last_name}`}
-                className="portrait"
-              />
-            ) : (
-              <div className="portrait-fallback">
-                {attendee.first_name?.charAt(0)}
-                {attendee.last_name?.charAt(0)}
-              </div>
-            )}
+            <button
+              className="portrait-button"
+              onClick={() => {
+                setPhotoError('')
+                setSelectedPhoto(null)
+                setShowPhotoModal(true)
+              }}
+              type="button"
+              aria-label="Change profile photo"
+              title="Change profile photo"
+            >
+              {attendee.profile_photo_url ? (
+                <img
+                  src={attendee.profile_photo_url}
+                  alt={`${attendee.first_name} ${attendee.last_name}`}
+                  className="portrait"
+                />
+              ) : (
+                <div className="portrait-fallback">
+                  {attendee.first_name?.charAt(0)}
+                  {attendee.last_name?.charAt(0)}
+                </div>
+              )}
+              <span className="portrait-edit-chip">Change photo</span>
+            </button>
 
             <div className="name-block">
               <h1>
@@ -216,6 +279,55 @@ export default function MePage() {
         </div>
       </div>
 
+      {showPhotoModal ? (
+        <div className="photo-lightbox" onClick={closePhotoModal}>
+          <div className="photo-panel" onClick={(e) => e.stopPropagation()}>
+            <button className="close-button" onClick={closePhotoModal} type="button">
+              ×
+            </button>
+
+            <div className="photo-kicker">Profile Photo</div>
+            <h2>Upload a new profile photo</h2>
+            <p className="photo-helper">Choose a clear photo of yourself. JPG, PNG, WEBP, or GIF only.</p>
+
+            <div className="upload-field">
+              <label htmlFor="profile-photo-upload">Choose photo</label>
+              <input
+                ref={fileInputRef}
+                id="profile-photo-upload"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(e) => {
+                  const nextFile = e.target.files?.[0] || null
+                  setSelectedPhoto(nextFile)
+                  setPhotoError('')
+                }}
+              />
+            </div>
+
+            {selectedPhoto ? (
+              <p className="selected-file">Selected: {selectedPhoto.name}</p>
+            ) : null}
+
+            {photoError ? <p className="photo-error">{photoError}</p> : null}
+
+            <div className="photo-actions">
+              <button className="secondary-button" onClick={closePhotoModal} type="button">
+                Cancel
+              </button>
+              <button
+                className="save-button modal-save-button"
+                onClick={handlePhotoUpload}
+                disabled={uploadingPhoto}
+                type="button"
+              >
+                {uploadingPhoto ? 'Uploading…' : 'Upload Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <style jsx>{`
         .me-shell {
           min-height: 100vh;
@@ -252,6 +364,19 @@ export default function MePage() {
           min-width: 0;
         }
 
+        .portrait-button {
+          position: relative;
+          display: inline-flex;
+          align-items: stretch;
+          justify-content: stretch;
+          padding: 0;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          border-radius: 28px;
+          flex-shrink: 0;
+        }
+
         .portrait,
         .portrait-fallback {
           width: 250px;
@@ -261,6 +386,7 @@ export default function MePage() {
           background: #e9dbc2;
           box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
           flex-shrink: 0;
+          display: block;
         }
 
         .portrait-fallback {
@@ -270,6 +396,30 @@ export default function MePage() {
           font-size: 64px;
           font-weight: 800;
           color: #7a643e;
+        }
+
+        .portrait-edit-chip {
+          position: absolute;
+          left: 14px;
+          right: 14px;
+          bottom: 14px;
+          padding: 10px 12px;
+          border-radius: 14px;
+          background: rgba(33, 22, 12, 0.8);
+          color: white;
+          font-size: 13px;
+          font-weight: 700;
+          text-align: center;
+          opacity: 0;
+          transform: translateY(4px);
+          transition: opacity 0.18s ease, transform 0.18s ease;
+          backdrop-filter: blur(6px);
+        }
+
+        .portrait-button:hover .portrait-edit-chip,
+        .portrait-button:focus-visible .portrait-edit-chip {
+          opacity: 1;
+          transform: translateY(0);
         }
 
         .name-block {
@@ -427,6 +577,131 @@ export default function MePage() {
           cursor: default;
         }
 
+        .photo-lightbox {
+          position: fixed;
+          inset: 0;
+          background: rgba(23, 18, 13, 0.7);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 22px;
+          z-index: 999;
+        }
+
+        .photo-panel {
+          position: relative;
+          width: 100%;
+          max-width: 560px;
+          padding: 28px;
+          border-radius: 30px;
+          background: #fffdf9;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+        }
+
+        .photo-kicker {
+          display: inline-block;
+          font-size: 12px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: #8a6a34;
+          background: #f9efdb;
+          padding: 8px 12px;
+          border-radius: 999px;
+        }
+
+        .photo-panel h2 {
+          margin: 16px 0 8px 0;
+          font-size: 34px;
+          line-height: 1.05;
+          letter-spacing: -0.04em;
+        }
+
+        .photo-helper {
+          margin: 0 0 22px 0;
+          color: #6b5b4b;
+          line-height: 1.6;
+        }
+
+        .upload-field label {
+          display: block;
+          margin-bottom: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #715d42;
+        }
+
+        .upload-field input {
+          width: 100%;
+          min-width: 0;
+          padding: 12px 14px;
+          border-radius: 14px;
+          border: 1px solid #dbc8a8;
+          background: #fffdf9;
+          font-size: 14px;
+          box-sizing: border-box;
+        }
+
+        .selected-file {
+          margin: 14px 0 0 0;
+          color: #4d4032;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .photo-error {
+          margin: 14px 0 0 0;
+          color: #8b2f2f;
+          font-size: 14px;
+        }
+
+        .photo-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .secondary-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 52px;
+          padding: 14px 18px;
+          border: 1px solid #d6c19a;
+          background: #f7ecd7;
+          color: #6b5430;
+          border-radius: 16px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .modal-save-button {
+          min-height: 52px;
+          margin-top: 0;
+          padding: 14px 18px;
+          border-radius: 16px;
+          font-size: 16px;
+          box-shadow: none;
+          flex: 1;
+        }
+
+        .close-button {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 42px;
+          height: 42px;
+          border: none;
+          border-radius: 999px;
+          background: rgba(23, 18, 13, 0.78);
+          color: white;
+          font-size: 28px;
+          line-height: 1;
+          cursor: pointer;
+          z-index: 2;
+        }
+
         @media (max-width: 980px) {
           .me-card {
             padding: 22px;
@@ -457,7 +732,8 @@ export default function MePage() {
           }
 
           .portrait,
-          .portrait-fallback {
+          .portrait-fallback,
+          .portrait-button {
             width: 180px;
             height: 180px;
           }
@@ -478,6 +754,10 @@ export default function MePage() {
             min-height: 60px;
             font-size: 22px;
           }
+
+          .photo-actions {
+            flex-direction: column;
+          }
         }
 
         @media (max-width: 640px) {
@@ -486,11 +766,13 @@ export default function MePage() {
           }
 
           .me-card,
-          .form-shell {
+          .form-shell,
+          .photo-panel {
             border-radius: 24px;
           }
 
-          .form-shell {
+          .form-shell,
+          .photo-panel {
             padding: 18px;
           }
 
