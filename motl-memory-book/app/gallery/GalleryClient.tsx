@@ -636,20 +636,22 @@ export default function GalleryClient({
               </button>
             )}
           </div>
-
+          
           <div className="header-action">
-            <button
-              className="header-action-button secondary"
-              onClick={() => {
-                setUploadError('')
-                setUploadMessage('')
-                setSelectedUploadFiles([])
-                setShowUploadModal(true)
-              }}
-              type="button"
-            >
-              Upload Photos / Videos
-            </button>
+            {currentUserId ? (
+              <button
+                className="header-action-button secondary"
+                onClick={() => {
+                  setUploadError('')
+                  setUploadMessage('')
+                  setSelectedUploadFiles([])
+                  setShowUploadModal(true)
+                }}
+                type="button"
+              >
+                Upload Photos / Videos
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
