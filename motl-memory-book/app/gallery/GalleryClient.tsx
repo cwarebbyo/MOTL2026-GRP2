@@ -215,6 +215,8 @@ export default function GalleryClient({
   const [uploadError, setUploadError] = useState('')
   const [uploadMessage, setUploadMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     const stored = localStorage.getItem('attendee')
@@ -525,6 +527,53 @@ export default function GalleryClient({
     if (e) e.stopPropagation()
     if (!person) return
     setSelectedPerson(person)
+  }
+
+  function canDeleteMedia(item: GalleryItem) {
+    if (!currentUserId || !currentUser) return false
+
+    const normalizedRole = (currentUser.role || '').trim().toLowerCase()
+    const hasElevatedRole = normalizedRole !== '' && normalizedRole !== 'participant'
+    const isOwner = currentUserId === item.attendee_id
+
+    return isOwner || hasElevatedRole
+  }
+
+  async function handleDeleteMedia(item: GalleryItem) {
+    if (!canDeleteMedia(item)) return
+
+    const confirmed = window.confirm('Delete this photo or video from the memory book?')
+    if (!confirmed) return
+
+    setDeletingId(item.id)
+    setDeleteError('')
+
+    try {
+      const res = await fetch('/api/media/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaId: item.id,
+          attendeeId: currentUserId,
+        }),
+      })
+
+      const contentType = res.headers.get('content-type') || ''
+      const json = contentType.includes('application/json') ? await res.json() : null
+
+      if (!res.ok) {
+        setDeleteError(json?.error || 'Could not delete this media.')
+        return
+      }
+
+      setMediaItems((prev) => prev.filter((mediaItem) => mediaItem.id !== item.id))
+      setSelected((prev) => (prev?.id === item.id ? null : prev))
+      setDeleteError('')
+    } catch {
+      setDeleteError('Something went wrong while deleting this media.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -962,6 +1011,20 @@ export default function GalleryClient({
               ) : (
                 selected.caption ? <p className="lightbox-caption">{selected.caption}</p> : null
               )}
+
+              {selected && canDeleteMedia(selected) ? (
+                <div className="delete-block">
+                  <button
+                    className="delete-button"
+                    onClick={() => handleDeleteMedia(selected)}
+                    disabled={deletingId === selected.id}
+                    type="button"
+                  >
+                    {deletingId === selected.id ? 'Deleting…' : 'Delete from Memory Book'}
+                  </button>
+                  {deleteError ? <p className="delete-error">{deleteError}</p> : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
