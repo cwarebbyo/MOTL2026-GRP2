@@ -869,14 +869,18 @@ export default function GalleryClient({
         .book-pages {
           position: relative;
           border-radius: 32px;
-          overflow: hidden;
           background: #fffaf2;
           border: 1px solid rgba(118, 93, 52, 0.14);
           box-shadow: 0 26px 60px rgba(59, 43, 21, 0.16);
         }
 
+        .book-cover {
+          overflow: hidden;
+        }
+
         .fixed-book-height {
           min-height: 760px;
+          height: auto;
         }
 
         .book-cover {
@@ -954,6 +958,7 @@ export default function GalleryClient({
         }
 
         .book-pages {
+          overflow: visible;
           background: linear-gradient(90deg, #f4ead8 0%, #fffdf9 12%, #fffdf9 88%, #f4ead8 100%);
         }
 
@@ -1000,6 +1005,7 @@ export default function GalleryClient({
 
         .gallery-grid-wrap {
           min-height: 0;
+          overflow: visible;
         }
 
         .gallery-grid {
@@ -1446,7 +1452,8 @@ export default function GalleryClient({
 
         @media (min-width: 1200px) {
           .fixed-book-height {
-            height: 1540px;
+            min-height: 1725px;
+            height: auto;
           }
         }
 
