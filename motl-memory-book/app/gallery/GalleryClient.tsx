@@ -39,6 +39,8 @@ type GalleryItem = MediaRow & {
   uploader: AttendeeRow | null
 }
 
+const PHOTOS_PER_PAGE = 12
+
 function formatShortName(firstName?: string, lastName?: string) {
   const first = (firstName || '').trim()
   const last = (lastName || '').trim()
@@ -92,9 +94,25 @@ function displayDateFromKey(key: string) {
   })
 }
 
+function splitDateLabel(label: string) {
+  const [monthDay = label, year = ''] = label.split(', ')
+  return { monthDay, year }
+}
+
 function personLocation(person?: AttendeeRow | null) {
   if (!person) return ''
   return [person.city, person.state, person.country].filter(Boolean).join(', ')
+}
+
+function dedupeLocations(items: GalleryItem[]) {
+  return Array.from(
+    new Set(
+      items
+        .flatMap((item) => [item.location_name, item.location_text])
+        .map((value) => (value || '').trim())
+        .filter(Boolean)
+    )
+  )
 }
 
 export default function GalleryClient({
@@ -114,7 +132,7 @@ export default function GalleryClient({
   const [saveMessage, setSaveMessage] = useState('')
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
   const [bookOpen, setBookOpen] = useState(false)
-  const [coverPhoto, setCoverPhoto] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const stored = localStorage.getItem('attendee')
@@ -162,37 +180,52 @@ export default function GalleryClient({
     setDraftCaptions(nextCaptions)
   }, [items])
 
-  useEffect(() => {
-    if (!items.length) return
-    const random = items[Math.floor(Math.random() * items.length)]
-    setCoverPhoto(random.file_url)
+  const dateTabMap = useMemo(() => {
+    const map = new Map<string, GalleryItem[]>()
+
+    items.forEach((item) => {
+      const key = dateKey(item.taken_at)
+      const dayItems = map.get(key) || []
+      dayItems.push(item)
+      map.set(key, dayItems)
+    })
+
+    return map
   }, [items])
 
   const dateTabs = useMemo(() => {
-    const map = new Map<string, number>()
-    items.forEach((item) => {
-      const key = dateKey(item.taken_at)
-      map.set(key, (map.get(key) || 0) + 1)
-    })
-
-    return Array.from(map.entries())
+    return Array.from(dateTabMap.entries())
       .sort(([a], [b]) => {
         if (a === 'unknown') return 1
         if (b === 'unknown') return -1
         return a.localeCompare(b)
       })
-      .map(([key, count]) => ({
-        key,
-        label: displayDateFromKey(key),
-        count,
-      }))
-  }, [items])
+      .map(([key, dayItems]) => {
+        const randomItem = dayItems[Math.floor(Math.random() * dayItems.length)] || null
+        return {
+          key,
+          label: displayDateFromKey(key),
+          count: dayItems.length,
+          coverPhoto: randomItem?.file_url || null,
+          locations: dedupeLocations(dayItems),
+        }
+      })
+  }, [dateTabMap])
 
   useEffect(() => {
     if (!selectedDateKey && dateTabs.length) {
       setSelectedDateKey(dateTabs[0].key)
     }
   }, [dateTabs, selectedDateKey])
+
+  const selectedDateTab = useMemo(
+    () => dateTabs.find((tab) => tab.key === selectedDateKey) || null,
+    [dateTabs, selectedDateKey]
+  )
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedDateKey, search])
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -208,6 +241,7 @@ export default function GalleryClient({
           item.location_text || '',
           item.caption || '',
           formatDate(item.taken_at),
+          formatDateTime(item.taken_at),
         ].some((value) => value.toLowerCase().includes(q))
       })
       .sort((a, b) => {
@@ -216,6 +250,13 @@ export default function GalleryClient({
         return aTime - bTime
       })
   }, [items, search, selectedDateKey])
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PHOTOS_PER_PAGE))
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * PHOTOS_PER_PAGE
+    return filteredItems.slice(start, start + PHOTOS_PER_PAGE)
+  }, [filteredItems, currentPage])
 
   async function savePhotoDetails(item: GalleryItem) {
     const nextLocation = (draftLocations[item.id] || '').trim()
@@ -264,13 +305,15 @@ export default function GalleryClient({
 
         <div className="hero-panel">
           <label className="search-label">Search the memory book</label>
-          <input
-            className="search-input"
-            placeholder="Search by person, place, caption, or date"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            disabled={!bookOpen}
-          />
+          <div className="search-input-wrap">
+            <input
+              className="search-input"
+              placeholder="Search by person, place, caption, or date"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              disabled={!bookOpen}
+            />
+          </div>
           <div className="hero-stats">
             <div>
               <span>{items.length}</span>
@@ -286,107 +329,172 @@ export default function GalleryClient({
       </div>
 
       <div className={`book-shell ${bookOpen ? 'open' : ''}`}>
-        <div className="date-tabs">
-          {dateTabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`date-tab ${selectedDateKey === tab.key ? 'active' : ''}`}
-              onClick={() => {
-                setSelectedDateKey(tab.key)
-                setBookOpen(true)
-              }}
-              type="button"
-            >
-              <span className="tab-label">{tab.label}</span>
-              <span className="tab-count">{tab.count}</span>
-            </button>
-          ))}
-        </div>
+        <div className="book-column">
+          <div className="book-stack-shadow" />
 
-        {!bookOpen ? (
-          <div className="book-cover">
-            <div className="cover-image-wrap">
-              {coverPhoto ? <img src={coverPhoto} alt="Memory book cover" className="cover-image" /> : null}
-              <div className="cover-overlay" />
-            </div>
-
-            <div className="cover-content">
-              <div className="cover-spine-mark">Memory Book</div>
-              <h2>MOTL 2026</h2>
-              <p>Group 2</p>
-              <button
-                className="open-book-button"
-                onClick={() => {
-                  if (!selectedDateKey && dateTabs.length) setSelectedDateKey(dateTabs[0].key)
-                  setBookOpen(true)
-                }}
-                type="button"
-              >
-                Open Book
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="book-pages">
-            <div className="book-toolbar">
-              <div>
-                <h3>{selectedDateKey ? displayDateFromKey(selectedDateKey) : 'Select a date'}</h3>
-                <p>{filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'}</p>
-              </div>
-
-              <button
-                className="close-book-button"
-                onClick={() => setBookOpen(false)}
-                type="button"
-              >
-                Close Book
-              </button>
-            </div>
-
-            <div className="gallery-grid">
-              {filteredItems.map((item) => (
-                <article key={item.id} className="photo-card">
-                  <button className="image-button" onClick={() => setSelected(item)} type="button">
-                    <img
-                      src={item.file_url}
-                      alt={item.caption || item.location_name || item.location_text || 'Memory photo'}
-                      className="photo-image"
-                    />
-                  </button>
-
-                  <div className="photo-body">
-                    <div className="photo-topline">
-                      <div>
-                        <h3>{item.location_name || 'Unnamed location'}</h3>
-                        <p>{item.location_text || 'Location unknown'}</p>
-                      </div>
-                      <time>{formatDate(item.taken_at)}</time>
-                    </div>
-                  </div>
-
-                  <div className="uploader-badge">
+          <div className="book-body">
+            <div className="tabs-rail">
+              <div className="date-tabs">
+                {dateTabs.map((tab) => {
+                  const parts = splitDateLabel(tab.label)
+                  return (
                     <button
-                      className="avatar-button"
-                      onClick={(e) => openPerson(item.uploader, e)}
-                      aria-label={`Open ${item.uploaderName}'s profile`}
+                      key={tab.key}
+                      className={`date-tab ${selectedDateKey === tab.key ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedDateKey(tab.key)
+                        setBookOpen(true)
+                      }}
                       type="button"
                     >
-                      {item.uploaderAvatar ? (
-                        <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
-                      ) : (
-                        <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
-                      )}
+                      <span className="tab-label">{parts.monthDay}</span>
+                      <span className="tab-year">{parts.year}</span>
                     </button>
-                    <div className="uploader-meta">
-                      <strong>{item.uploaderShortName}</strong>
-                      <span>Uploaded this photo</span>
+                  )
+                })}
+              </div>
+            </div>
+
+            {!bookOpen ? (
+              <div className="book-cover fixed-book-height">
+                <div className="cover-image-wrap">
+                  {selectedDateTab?.coverPhoto ? (
+                    <img
+                      src={selectedDateTab.coverPhoto}
+                      alt={`Memory book cover for ${selectedDateTab.label}`}
+                      className="cover-image"
+                    />
+                  ) : null}
+                  <div className="cover-overlay" />
+                </div>
+
+                <div className="cover-content">
+                  <div className="cover-spine-mark">Memory Book</div>
+                  <h2>{selectedDateTab?.label || 'MOTL 2026'}</h2>
+                  {selectedDateTab?.locations?.length ? (
+                    <div className="cover-locations">
+                      {selectedDateTab.locations.map((location) => (
+                        <p key={location}>{location}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>Group 2</p>
+                  )}
+                  <button
+                    className="open-book-button"
+                    onClick={() => {
+                      if (!selectedDateKey && dateTabs.length) setSelectedDateKey(dateTabs[0].key)
+                      setBookOpen(true)
+                    }}
+                    type="button"
+                  >
+                    Open Book
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="book-pages fixed-book-height">
+                <div className="book-gutter" />
+
+                <div className="book-pages-content">
+                  <div className="book-toolbar">
+                    <div>
+                      <div className="book-date-kicker">Day View</div>
+                      <h3>{selectedDateTab?.label || 'Select a date'}</h3>
+                      <p>
+                        {filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'}
+                        {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ''}
+                      </p>
                     </div>
                   </div>
-                </article>
-              ))}
-            </div>
+
+                  <div className="gallery-grid-wrap">
+                    <div className="gallery-grid">
+                      {paginatedItems.map((item) => (
+                        <article key={item.id} className="photo-card">
+                          <button className="image-button" onClick={() => setSelected(item)} type="button">
+                            <img
+                              src={item.file_url}
+                              alt={item.caption || item.location_name || item.location_text || 'Memory photo'}
+                              className="photo-image"
+                            />
+                          </button>
+
+                          <div className="photo-body">
+                            <div className="photo-topline">
+                              <div>
+                                <h3>{item.location_name || 'Unnamed location'}</h3>
+                                <p>{item.location_text || 'Location unknown'}</p>
+                              </div>
+                              <time>{formatDate(item.taken_at)}</time>
+                            </div>
+                          </div>
+
+                          <div className="uploader-badge">
+                            <button
+                              className="avatar-button"
+                              onClick={(e) => openPerson(item.uploader, e)}
+                              aria-label={`Open ${item.uploaderName}'s profile`}
+                              type="button"
+                            >
+                              {item.uploaderAvatar ? (
+                                <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
+                              ) : (
+                                <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
+                              )}
+                            </button>
+                            <div className="uploader-meta">
+                              <strong>{item.uploaderShortName}</strong>
+                              <span>Uploaded this photo</span>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+
+                  {totalPages > 1 ? (
+                    <div className="pagination">
+                      <button
+                        className="pagination-button"
+                        onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                        disabled={currentPage === 1}
+                        type="button"
+                      >
+                        Previous
+                      </button>
+
+                      <div className="pagination-pages">
+                        {Array.from({ length: totalPages }, (_, index) => {
+                          const page = index + 1
+                          return (
+                            <button
+                              key={page}
+                              className={`pagination-page ${page === currentPage ? 'active' : ''}`}
+                              onClick={() => setCurrentPage(page)}
+                              type="button"
+                            >
+                              {page}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <button
+                        className="pagination-button"
+                        onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                        disabled={currentPage === totalPages}
+                        type="button"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {selected ? (
@@ -570,6 +678,7 @@ export default function GalleryClient({
           box-shadow: 0 18px 45px rgba(63, 46, 22, 0.12);
           border: 1px solid rgba(112, 89, 48, 0.12);
           padding: 28px;
+          overflow: hidden;
         }
 
         .hero-kicker,
@@ -611,8 +720,16 @@ export default function GalleryClient({
           color: #7b6545;
         }
 
+        .search-input-wrap {
+          width: 100%;
+          max-width: 100%;
+        }
+
         .search-input {
           width: 100%;
+          max-width: 100%;
+          display: block;
+          box-sizing: border-box;
           padding: 16px 18px;
           border-radius: 18px;
           border: 1px solid #d7c6a8;
@@ -661,62 +778,105 @@ export default function GalleryClient({
         .book-shell {
           max-width: 1400px;
           margin: 0 auto;
-          display: grid;
-          grid-template-columns: 120px 1fr;
-          gap: 18px;
-          align-items: stretch;
+        }
+
+        .book-column {
+          position: relative;
+        }
+
+        .book-stack-shadow {
+          position: absolute;
+          inset: 12px 14px -10px 14px;
+          border-radius: 34px;
+          background: rgba(115, 85, 42, 0.08);
+          filter: blur(16px);
+          z-index: 0;
+        }
+
+        .book-body {
+          position: relative;
+          z-index: 1;
+          padding-left: 152px;
+        }
+
+        .tabs-rail {
+          position: absolute;
+          left: 0;
+          top: 34px;
+          bottom: 34px;
+          width: 180px;
+          display: flex;
+          align-items: flex-start;
+          pointer-events: none;
         }
 
         .date-tabs {
+          pointer-events: auto;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          padding-top: 24px;
+          align-items: flex-end;
+          gap: 12px;
+          width: 100%;
         }
 
         .date-tab {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          gap: 4px;
-          width: 100%;
-          border: 1px solid #d8c5a4;
+          gap: 3px;
+          width: 132px;
+          min-height: 92px;
+          border: 1px solid #d9c8aa;
+          border-right: none;
           background: #f9efdb;
-          color: #5d4a2d;
-          border-radius: 0 18px 18px 0;
-          padding: 14px 14px 14px 16px;
+          color: #2f2418;
+          border-radius: 20px 0 0 20px;
+          padding: 18px 16px 16px 18px;
           cursor: pointer;
           text-align: left;
-          box-shadow: 0 8px 18px rgba(63, 46, 22, 0.08);
+          box-shadow: 0 10px 20px rgba(63, 46, 22, 0.07);
+          transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .date-tab:hover {
+          transform: translateX(-6px);
         }
 
         .date-tab.active {
-          background: #fffaf2;
-          color: #231a12;
-          border-color: #b99962;
-          transform: translateX(6px);
+          width: 146px;
+          transform: translateX(-16px);
+          background: #f3d4d0;
+          border-color: #d7a4a0;
+          box-shadow: 0 12px 24px rgba(101, 56, 52, 0.14);
+        }
+
+        .tab-label,
+        .tab-year {
+          display: block;
+          font-weight: 800;
+          line-height: 1.15;
         }
 
         .tab-label {
-          font-size: 13px;
-          font-weight: 700;
-          line-height: 1.35;
+          font-size: 16px;
         }
 
-        .tab-count {
-          font-size: 12px;
-          color: #7a6649;
+        .tab-year {
+          font-size: 16px;
         }
 
         .book-cover,
         .book-pages {
           position: relative;
-          min-height: 760px;
           border-radius: 32px;
           overflow: hidden;
           background: #fffaf2;
           border: 1px solid rgba(118, 93, 52, 0.14);
           box-shadow: 0 26px 60px rgba(59, 43, 21, 0.16);
+        }
+
+        .fixed-book-height {
+          min-height: 760px;
         }
 
         .book-cover {
@@ -763,51 +923,59 @@ export default function GalleryClient({
 
         .cover-content h2 {
           margin: 0;
-          font-size: clamp(42px, 7vw, 92px);
+          font-size: clamp(42px, 7vw, 72px);
           line-height: 0.92;
           letter-spacing: -0.05em;
         }
 
         .cover-content p {
-          margin: 12px 0 0 0;
-          font-size: 24px;
+          margin: 0;
+          font-size: 20px;
           opacity: 0.95;
         }
 
-        .open-book-button,
-        .close-book-button {
+        .cover-locations {
+          margin-top: 18px;
+          display: grid;
+          gap: 4px;
+        }
+
+        .open-book-button {
           margin-top: 24px;
-          border: none;
+          border: 1px solid rgba(255, 255, 255, 0.24);
           border-radius: 16px;
           padding: 14px 18px;
-          background: #231a12;
+          background: rgba(255, 255, 255, 0.16);
           color: white;
           font-size: 15px;
           font-weight: 700;
           cursor: pointer;
-        }
-
-        .open-book-button {
-          background: rgba(255,255,255,0.16);
-          border: 1px solid rgba(255,255,255,0.24);
           backdrop-filter: blur(6px);
         }
 
         .book-pages {
-          padding: 28px;
-          background:
-            linear-gradient(90deg, #f4ead8 0%, #fffdf9 10%, #fffdf9 90%, #f4ead8 100%);
+          background: linear-gradient(90deg, #f4ead8 0%, #fffdf9 12%, #fffdf9 88%, #f4ead8 100%);
         }
 
-        .book-pages::before {
-          content: '';
+        .book-gutter {
           position: absolute;
           top: 0;
           bottom: 0;
           left: 50%;
-          width: 2px;
-          background: linear-gradient(180deg, rgba(180,153,98,0.06), rgba(180,153,98,0.26), rgba(180,153,98,0.06));
+          width: 90px;
           transform: translateX(-50%);
+          background: radial-gradient(circle at center, rgba(182, 145, 86, 0.16), rgba(182, 145, 86, 0.03) 55%, transparent 72%);
+          z-index: 0;
+          pointer-events: none;
+        }
+
+        .book-pages-content {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          grid-template-rows: auto 1fr auto;
+          height: 100%;
+          padding: 28px;
         }
 
         .book-toolbar {
@@ -815,7 +983,7 @@ export default function GalleryClient({
           align-items: flex-start;
           justify-content: space-between;
           gap: 20px;
-          margin-bottom: 24px;
+          margin-bottom: 22px;
         }
 
         .book-toolbar h3 {
@@ -830,9 +998,13 @@ export default function GalleryClient({
           color: #6c5b4d;
         }
 
+        .gallery-grid-wrap {
+          min-height: 0;
+        }
+
         .gallery-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 22px;
         }
 
@@ -842,9 +1014,9 @@ export default function GalleryClient({
           height: 100%;
           overflow: hidden;
           border-radius: 28px;
-          background: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.96);
           border: 1px solid rgba(118, 93, 52, 0.12);
-          box-shadow: 0 22px 40px rgba(59, 43, 21, 0.12);
+          box-shadow: 0 18px 34px rgba(59, 43, 21, 0.1);
         }
 
         .image-button {
@@ -859,7 +1031,7 @@ export default function GalleryClient({
         .photo-image {
           display: block;
           width: 100%;
-          height: 270px;
+          aspect-ratio: 4 / 3;
           object-fit: cover;
           background: #e7dcc8;
         }
@@ -909,7 +1081,7 @@ export default function GalleryClient({
           width: 120px;
           height: 120px;
           border-radius: 28px;
-          box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
         }
 
         .uploader-avatar.fallback,
@@ -922,6 +1094,7 @@ export default function GalleryClient({
           background: #f4e7cf;
         }
 
+        .uploader-avatar.fallback.large,
         .person-avatar.fallback {
           font-size: 32px;
         }
@@ -978,6 +1151,45 @@ export default function GalleryClient({
           font-size: 12px;
           font-weight: 700;
           padding: 8px 12px;
+        }
+
+        .pagination {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          margin-top: 22px;
+        }
+
+        .pagination-pages {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .pagination-button,
+        .pagination-page {
+          border: 1px solid #d6c19a;
+          background: #f7ecd7;
+          color: #6b5430;
+          border-radius: 14px;
+          padding: 10px 14px;
+          font-weight: 700;
+          cursor: pointer;
+          min-width: 46px;
+        }
+
+        .pagination-page.active {
+          background: #d7b67b;
+          color: #2f2418;
+          border-color: #c8a462;
+        }
+
+        .pagination-button:disabled,
+        .pagination-page:disabled {
+          opacity: 0.45;
+          cursor: default;
         }
 
         .lightbox-edit {
@@ -1232,25 +1444,52 @@ export default function GalleryClient({
           z-index: 2;
         }
 
+        @media (min-width: 1200px) {
+          .fixed-book-height {
+            height: 1540px;
+          }
+        }
+
+        @media (max-width: 1199px) {
+          .gallery-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .fixed-book-height {
+            height: auto;
+          }
+        }
+
         @media (max-width: 1100px) {
-          .book-shell {
-            grid-template-columns: 1fr;
+          .book-body {
+            padding-left: 0;
+          }
+
+          .tabs-rail {
+            position: static;
+            width: 100%;
+            margin-bottom: 14px;
           }
 
           .date-tabs {
             flex-direction: row;
+            justify-content: flex-start;
+            align-items: stretch;
             overflow-x: auto;
-            padding-top: 0;
             padding-bottom: 8px;
           }
 
           .date-tab {
             min-width: 180px;
+            width: 180px;
+            min-height: auto;
+            border-right: 1px solid #d9c8aa;
             border-radius: 18px;
           }
 
-          .date-tab.active {
-            transform: translateY(2px);
+          .date-tab.active,
+          .date-tab:hover {
+            transform: none;
           }
         }
 
@@ -1274,9 +1513,19 @@ export default function GalleryClient({
           .contact-grid {
             grid-template-columns: 1fr;
           }
+        }
 
-          .book-pages::before {
-            display: none;
+        @media (max-width: 720px) {
+          .gallery-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .pagination {
+            flex-direction: column;
+          }
+
+          .book-pages-content {
+            padding: 20px;
           }
         }
 
@@ -1294,10 +1543,6 @@ export default function GalleryClient({
             border-radius: 22px;
           }
 
-          .photo-image {
-            height: 230px;
-          }
-
           .edit-row {
             flex-direction: column;
           }
@@ -1310,12 +1555,12 @@ export default function GalleryClient({
             padding: 20px;
           }
 
-          .book-pages {
-            padding: 20px;
-          }
-
           .cover-content {
             padding: 26px;
+          }
+
+          .cover-content h2 {
+            font-size: 44px;
           }
         }
       `}</style>
