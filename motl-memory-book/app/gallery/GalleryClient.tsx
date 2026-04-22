@@ -581,34 +581,48 @@ export default function GalleryClient({
       <div className="gallery-hero header-card">
         <div className="header-main">
           <div className="hero-kicker">MOTL 2026 · Group 2</div>
+          <div className="header-mobile-action top">
+            {currentUserId ? (
+              <button
+                className="header-action-button"
+                onClick={() => router.push('/me')}
+                type="button"
+              >
+                Welcome, {formatShortName(currentUser?.first_name, currentUser?.last_name)}
+              </button>
+            ) : (
+              <button
+                className="header-action-button"
+                onClick={() => {
+                  setLoginError('')
+                  setShowLoginModal(true)
+                }}
+                type="button"
+              >
+                Login
+              </button>
+            )}
+          </div>
           <h1>Our Shared Experience</h1>
           <p>Browse each day to relive our experience in the way it originally unfolded.</p>
+
+          <div className="header-stats-pill">
+            <span>{items.length} Photos</span>
+            <span className="stats-divider">•</span>
+            <span>{new Set(items.map((i) => i.attendee_id)).size} Contributors</span>
+          </div>
         </div>
 
         <div className="header-side">
-          <div className="header-action">
+          <div className="header-action desktop-only">
             {currentUserId ? (
-              <div className="header-action-stack">
-                <button
-                  className="header-action-button"
-                  onClick={() => router.push('/me')}
-                  type="button"
-                >
-                  Welcome, {formatShortName(currentUser?.first_name, currentUser?.last_name)}
-                </button>
-                <button
-                  className="header-action-button secondary"
-                  onClick={() => {
-                    setUploadError('')
-                    setUploadMessage('')
-                    setSelectedUploadFiles([])
-                    setShowUploadModal(true)
-                  }}
-                  type="button"
-                >
-                  Upload Photos / Videos
-                </button>
-              </div>
+              <button
+                className="header-action-button"
+                onClick={() => router.push('/me')}
+                type="button"
+              >
+                Welcome, {formatShortName(currentUser?.first_name, currentUser?.last_name)}
+              </button>
             ) : (
               <button
                 className="header-action-button"
@@ -623,15 +637,19 @@ export default function GalleryClient({
             )}
           </div>
 
-          <div className="header-stats">
-            <div className="hero-stat-card">
-              <span>{items.length}</span>
-              <small>Photos</small>
-            </div>
-            <div className="hero-stat-card">
-              <span>{new Set(items.map((i) => i.attendee_id)).size}</span>
-              <small>Contributors</small>
-            </div>
+          <div className="header-action">
+            <button
+              className="header-action-button secondary"
+              onClick={() => {
+                setUploadError('')
+                setUploadMessage('')
+                setSelectedUploadFiles([])
+                setShowUploadModal(true)
+              }}
+              type="button"
+            >
+              Upload Photos / Videos
+            </button>
           </div>
         </div>
       </div>
@@ -1148,11 +1166,19 @@ export default function GalleryClient({
         padding: 18px 20px;
       }
 
+      .header-mobile-action {
+        display: none;
+      }
+
       .header-side {
         display: flex;
         flex-direction: column;
         gap: 16px;
         justify-content: center;
+      }
+
+      .desktop-only {
+        display: block;
       }
 
       .header-action {
@@ -1169,11 +1195,13 @@ export default function GalleryClient({
         border: 1px solid #d6c19a;
         background: #f7ecd7;
         color: #6b5430;
-        border-radius: 16px;
-        padding: 14px 16px;
-        font-weight: 700;
+        border-radius: 18px;
+        padding: 18px 20px;
+        font-size: 16px;
+        font-weight: 800;
         cursor: pointer;
         text-align: center;
+        box-shadow: 0 10px 22px rgba(83, 62, 28, 0.08);
       }
 
       .header-action-button.secondary {
@@ -1220,38 +1248,26 @@ export default function GalleryClient({
         color: #5e4d3d;
         font-weight: 500;
       }
-    
-      .header-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        justify-content: center;
-      }
-    
-      .hero-stat-card {
-        border-radius: 22px;
+
+      .header-stats-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-self: flex-start;
+        margin-top: 18px;
+        padding: 12px 18px;
+        border-radius: 999px;
         background: #f7f0e2;
         border: 1px solid #e2d0aa;
-        padding: 14px 18px;
-        min-height: 84px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        color: #6b5430;
+        font-size: 14px;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(83, 62, 28, 0.06);
       }
-    
-      .hero-stat-card span {
-        display: block;
-        font-size: 38px;
-        line-height: 1;
-        font-weight: 800;
-        color: #23160f;
-      }
-    
-      .hero-stat-card small {
-        display: block;
-        margin-top: 4px;
-        font-size: 16px;
-        color: #665546;
+
+      .stats-divider {
+        opacity: 0.5;
       }
     
       .search-label {
@@ -2156,18 +2172,18 @@ export default function GalleryClient({
         z-index: 2;
       }
     
-      @media (min-width: 1101px) {
+      @media (min-width: 1200px) {
         .fixed-book-height {
           min-height: 1725px;
           height: auto;
         }
       }
-      
+    
       @media (max-width: 1199px) {
         .gallery-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-      
+    
         .fixed-book-height {
           height: auto;
         }
@@ -2251,10 +2267,23 @@ export default function GalleryClient({
 
         .header-side {
           width: 100%;
+          gap: 14px;
+        }
+
+        .desktop-only {
+          display: none;
+        }
+
+        .header-mobile-action {
+          display: block;
+          width: 100%;
+          margin: 0 0 14px 0;
         }
 
         .header-action-button {
           width: 100%;
+          padding: 16px 18px;
+          font-size: 16px;
         }
     
         .gallery-hero.header-card,
@@ -2284,6 +2313,14 @@ export default function GalleryClient({
         .login-panel {
           padding: 20px;
           border-radius: 22px;
+        }
+
+        .header-main {
+          order: 1;
+        }
+
+        .header-side {
+          order: 2;
         }
     
         .hero-stat-card span {
