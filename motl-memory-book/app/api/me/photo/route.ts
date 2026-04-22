@@ -2,11 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase-admin'
 
 const BUCKET = process.env.SUPABASE_PROFILE_PHOTO_BUCKET || 'profile-photos'
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const MAX_FILE_SIZE = 12 * 1024 * 1024
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '-').toLowerCase()
+}
+
+function guessExtension(fileName: string, mimeType: string) {
+  const explicit = fileName.split('.').pop()?.toLowerCase()
+  if (explicit && explicit !== fileName.toLowerCase()) return explicit
+
+  switch (mimeType) {
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/png':
+      return 'png'
+    case 'image/webp':
+      return 'webp'
+    case 'image/gif':
+      return 'gif'
+    case 'image/heic':
+    case 'image/heif':
+      return 'heic'
+    default:
+      return 'jpg'
+  }
+}
+
+function getBucketPathFromPublicUrl(url: string | null | undefined) {
+  if (!url) return null
+  const marker = `/storage/v1/object/public/${BUCKET}/`
+  const index = url.indexOf(marker)
+  if (index === -1) return null
+  return url.slice(index + marker.length).split('?')[0] || null
 }
 
 export async function POST(req: NextRequest) {
@@ -23,16 +51,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing photo file.' }, { status: 400 })
     }
 
-    if (!ALLOWED_TYPES.has(file.type)) {
-      return NextResponse.json({ error: 'Please upload a JPG, PNG, WEBP, or GIF image.' }, { status: 400 })
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Please upload an image file.' }, { status: 400 })
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'Photo must be 10MB or smaller.' }, { status: 400 })
+      return NextResponse.json({ error: 'Photo must be 12MB or smaller.' }, { status: 400 })
     }
 
-    const fileExt = sanitizeFileName(file.name || 'profile-photo')
-    const filePath = `attendees/${attendeeId}/${Date.now()}-${fileExt}`
+    const { data: existingAttendee, error: attendeeError } = await supabaseAdmin
+      .from('attendees')
+      .select('*')
+      .eq('attendee_id', attendeeId)
+      .single()
+
+    if (attendeeError || !existingAttendee) {
+      return NextResponse.json({ error: attendeeError?.message || 'Attendee not found.' }, { status: 404 })
+    }
+
+    const baseName = sanitizeFileName(file.name || 'profile-photo')
+    const extension = guessExtension(baseName, file.type)
+    const filePath = `attendees/${attendeeId}/${Date.now()}-${baseName.replace(/\.[^.]+$/, '')}.${extension}`
     const arrayBuffer = await file.arrayBuffer()
 
     const { error: uploadError } = await supabaseAdmin.storage
@@ -68,6 +107,11 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    const oldStoragePath = getBucketPathFromPublicUrl(existingAttendee.profile_photo_url)
+    if (oldStoragePath && oldStoragePath !== filePath) {
+      await supabaseAdmin.storage.from(BUCKET).remove([oldStoragePath])
     }
 
     return NextResponse.json({ attendee })
