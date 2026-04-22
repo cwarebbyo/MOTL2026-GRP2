@@ -32,6 +32,7 @@ type AttendeeRow = {
   why_did_you_come?: string | null
   post_trip_reflection?: string | null
   role?: string | null
+  [key: string]: any
 }
 
 type GalleryItem = MediaRow & {
@@ -39,6 +40,18 @@ type GalleryItem = MediaRow & {
   uploaderShortName: string
   uploaderAvatar: string | null
   uploader: AttendeeRow | null
+}
+
+type RelationshipInfo = {
+  attendee: AttendeeRow
+  label: string
+}
+
+type DirectoryItem = {
+  attendee: AttendeeRow
+  shortName: string
+  location: string
+  avatar: string | null
 }
 
 const PHOTOS_PER_PAGE = 12
@@ -106,6 +119,66 @@ function personLocation(person?: AttendeeRow | null) {
   return [person.city, person.state, person.country].filter(Boolean).join(', ')
 }
 
+
+
+
+function normalizeRelationshipLabel(value?: string | null) {
+  const raw = (value || '').trim()
+  if (!raw) return 'Relationship'
+  return raw
+    .split(/[_-]/g)
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : ''))
+    .join(' ')
+}
+
+function maybeJsonParse(value: unknown) {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return value
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+function extractRelationships(person: AttendeeRow | null, attendeeMap: Map<string, AttendeeRow>) {
+  if (!person) return [] as RelationshipInfo[]
+
+  const raw = typeof person.relationships === 'string' ? person.relationships.trim() : ''
+  if (!raw) return [] as RelationshipInfo[]
+
+  const collected: RelationshipInfo[] = []
+  const seen = new Set<string>()
+
+  for (const entry of raw.split(',')) {
+    const trimmed = entry.trim()
+    if (!trimmed) continue
+
+    const dashIndex = trimmed.indexOf('-')
+    if (dashIndex === -1) continue
+
+    const relatedId = trimmed.slice(0, dashIndex).trim()
+    const label = trimmed.slice(dashIndex + 1).trim()
+
+    if (!relatedId || !label || String(relatedId) === String(person.attendee_id)) continue
+
+    const relatedPerson = attendeeMap.get(String(relatedId))
+    if (!relatedPerson) continue
+
+    const key = `${relatedPerson.attendee_id}:${String(label).toLowerCase()}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    collected.push({
+      attendee: relatedPerson,
+      label: normalizeRelationshipLabel(String(label)),
+    })
+  }
+
+  return collected
+}
 
 function isVideoMedia(item: Pick<MediaRow, 'file_type' | 'file_url'>) {
   return (item.file_type || '').toLowerCase().startsWith('video/') || /\.(mp4|mov|m4v|webm|ogg)$/i.test(item.file_url || '')
@@ -209,6 +282,7 @@ export default function GalleryClient({
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
+  const [selectedSection, setSelectedSection] = useState<'date' | 'directory'>('date')
   const [bookView, setBookView] = useState<'cover' | 'pages'>('cover')
   const [currentPage, setCurrentPage] = useState(1)
   const [mediaItems, setMediaItems] = useState<MediaRow[]>(media)
@@ -320,13 +394,50 @@ export default function GalleryClient({
     [dateTabs, selectedDateKey]
   )
 
+  const directoryItems = useMemo<DirectoryItem[]>(() => {
+    const q = search.trim().toLowerCase()
+    return attendees
+      .slice()
+      .sort((a, b) => formatShortName(a.first_name, a.last_name).localeCompare(formatShortName(b.first_name, b.last_name)))
+      .filter((person) => {
+        if (!q) return true
+        return [
+          formatShortName(person.first_name, person.last_name),
+          personLocation(person),
+          person.role || '',
+          person.city || '',
+          person.state || '',
+          person.country || '',
+        ].some((value) => value.toLowerCase().includes(q))
+      })
+      .map((person) => ({
+        attendee: person,
+        shortName: formatShortName(person.first_name, person.last_name),
+        location: personLocation(person) || 'Location not shared',
+        avatar: person.profile_photo_url || null,
+      }))
+  }, [attendees, search])
+
+  const directoryTotalPages = Math.max(1, Math.ceil(directoryItems.length / PHOTOS_PER_PAGE))
+
+  const paginatedDirectoryItems = useMemo(() => {
+    const start = (currentPage - 1) * PHOTOS_PER_PAGE
+    return directoryItems.slice(start, start + PHOTOS_PER_PAGE)
+  }, [directoryItems, currentPage])
+
+  const selectedPersonRelationships = useMemo(
+    () => extractRelationships(selectedPerson, attendeeMap),
+    [selectedPerson, attendeeMap]
+  )
+
+
   useEffect(() => {
     setCurrentPage(1)
-  }, [selectedDateKey, search])
+  }, [selectedDateKey, selectedSection, search])
 
   useEffect(() => {
     setSearch('')
-  }, [selectedDateKey])
+  }, [selectedDateKey, selectedSection])
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -683,12 +794,19 @@ export default function GalleryClient({
                 <select
                   id="date-tab-select"
                   className="tabs-select"
-                  value={selectedDateKey || ''}
+                  value={selectedSection === 'directory' ? '__directory__' : selectedDateKey || ''}
                   onChange={(e) => {
-                    setSelectedDateKey(e.target.value)
-                    setBookView('cover')
+                    if (e.target.value === '__directory__') {
+                      setSelectedSection('directory')
+                      setBookView('pages')
+                    } else {
+                      setSelectedSection('date')
+                      setSelectedDateKey(e.target.value)
+                      setBookView('cover')
+                    }
                   }}
                 >
+                  <option value="__directory__">Directory</option>
                   {dateTabs.map((tab) => (
                     <option key={tab.key} value={tab.key}>
                       {tab.label}
@@ -700,6 +818,18 @@ export default function GalleryClient({
 
             <div className="tabs-rail">
               <div className="date-tabs">
+                <button
+                  className={`date-tab directory-tab ${selectedSection === 'directory' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedSection('directory')
+                    setBookView('pages')
+                  }}
+                  type="button"
+                >
+                  <span className="tab-label">Directory</span>
+                  <span className="tab-year">Travelers</span>
+                </button>
+
                 {dateTabs.map((tab) => {
                   const parts = splitDateLabel(tab.label)
                   return (
@@ -707,6 +837,7 @@ export default function GalleryClient({
                       key={tab.key}
                       className={`date-tab ${selectedDateKey === tab.key ? 'active' : ''}`}
                       onClick={() => {
+                        setSelectedSection('date')
                         setSelectedDateKey(tab.key)
                         setBookView('cover')
                       }}
@@ -720,7 +851,7 @@ export default function GalleryClient({
               </div>
             </div>
 
-            {bookView === 'cover' ? (
+            {selectedSection === 'date' && bookView === 'cover' ? (
               <div className="book-cover fixed-book-height">
                 <div className="cover-image-wrap">
                   {selectedDateTab?.coverPhoto ? (
@@ -761,11 +892,12 @@ export default function GalleryClient({
                 <div className="book-pages-content">
                   <div className="book-toolbar">
                     <div className="toolbar-left">
-                      <div className="book-date-kicker">Day View</div>
-                      <h3>{selectedDateTab?.label || 'Select a date'}</h3>
+                      <div className="book-date-kicker">{selectedSection === 'directory' ? 'Directory' : 'Day View'}</div>
+                      <h3>{selectedSection === 'directory' ? 'Trip Directory' : selectedDateTab?.label || 'Select a date'}</h3>
                       <p>
-                        {filteredItems.length} photo{filteredItems.length === 1 ? '' : 's'}
-                        {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ''}
+                        {selectedSection === 'directory'
+                          ? `${directoryItems.length} traveler${directoryItems.length === 1 ? '' : 's'}${directoryTotalPages > 1 ? ` · Page ${currentPage} of ${directoryTotalPages}` : ''}`
+                          : `${filteredItems.length} photo${filteredItems.length === 1 ? '' : 's'}${totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ''}`}
                       </p>
                     </div>
 
@@ -774,7 +906,7 @@ export default function GalleryClient({
                       <div className="search-input-wrap">
                         <input
                           className="search-input"
-                          placeholder="Search this day by person, place, caption, or date"
+                          placeholder={selectedSection === 'directory' ? 'Search travelers by name, location, or role' : 'Search this day by person, place, caption, or date'}
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
                           type="text"
@@ -785,54 +917,94 @@ export default function GalleryClient({
 
                   <div className="gallery-grid-wrap">
                     <div className="gallery-grid">
-                      {paginatedItems.map((item) => (
-                        <article key={item.id} className="photo-card">
-                          <button className="image-button" onClick={() => setSelected(item)} type="button">
-                            {isVideoMedia(item) ? (
-                              <video src={item.file_url} className="photo-image" muted playsInline preload="metadata" />
-                            ) : (
-                              <img
-                                src={item.file_url}
-                                alt={item.caption || item.location_name || item.location_text || 'Memory photo'}
-                                className="photo-image"
-                              />
-                            )}
-                          </button>
+                      {selectedSection === 'directory'
+                        ? paginatedDirectoryItems.map((item) => (
+                            <article key={item.attendee.attendee_id} className="photo-card">
+                              <button className="image-button" onClick={() => setSelectedPerson(item.attendee)} type="button">
+                                {item.avatar ? (
+                                  <img src={item.avatar} alt={item.shortName} className="photo-image" />
+                                ) : (
+                                  <div className="photo-image directory-fallback-image">{item.shortName.charAt(0)}</div>
+                                )}
+                              </button>
 
-                          <div className="photo-body">
-                            <div className="photo-topline">
-                              <div>
-                                <h3>{item.location_name || 'Unnamed location'}</h3>
-                                <p>{item.location_text || 'Location unknown'}</p>
+                              <div className="photo-body">
+                                <div className="photo-topline">
+                                  <div>
+                                    <h3>{item.shortName}</h3>
+                                    <p>{item.location}</p>
+                                  </div>
+                                </div>
                               </div>
-                              <time>{formatDate(item.taken_at)}</time>
-                            </div>
-                          </div>
 
-                          <div className="uploader-badge">
-                            <button
-                              className="avatar-button"
-                              onClick={(e) => openPerson(item.uploader, e)}
-                              aria-label={`Open ${item.uploaderName}'s profile`}
-                              type="button"
-                            >
-                              {item.uploaderAvatar ? (
-                                <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
-                              ) : (
-                                <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
-                              )}
-                            </button>
-                            <div className="uploader-meta">
-                              <strong>{item.uploaderShortName}</strong>
-                              <span>Uploaded this memory</span>
-                            </div>
-                          </div>
-                        </article>
-                      ))}
+                              <div className="uploader-badge">
+                                <button
+                                  className="avatar-button"
+                                  onClick={(e) => openPerson(item.attendee, e)}
+                                  aria-label={`Open ${item.shortName}'s profile`}
+                                  type="button"
+                                >
+                                  {item.avatar ? (
+                                    <img src={item.avatar} alt={item.shortName} className="uploader-avatar" />
+                                  ) : (
+                                    <div className="uploader-avatar fallback">{item.shortName.charAt(0)}</div>
+                                  )}
+                                </button>
+                                <div className="uploader-meta">
+                                  <strong>{item.shortName}</strong>
+                                  <span>{(item.attendee.role || '').trim() || 'Traveler'}</span>
+                                </div>
+                              </div>
+                            </article>
+                          ))
+                        : paginatedItems.map((item) => (
+                            <article key={item.id} className="photo-card">
+                              <button className="image-button" onClick={() => setSelected(item)} type="button">
+                                {isVideoMedia(item) ? (
+                                  <video src={item.file_url} className="photo-image" muted playsInline preload="metadata" />
+                                ) : (
+                                  <img
+                                    src={item.file_url}
+                                    alt={item.caption || item.location_name || item.location_text || 'Memory photo'}
+                                    className="photo-image"
+                                  />
+                                )}
+                              </button>
+
+                              <div className="photo-body">
+                                <div className="photo-topline">
+                                  <div>
+                                    <h3>{item.location_name || 'Unnamed location'}</h3>
+                                    <p>{item.location_text || 'Location unknown'}</p>
+                                  </div>
+                                  <time>{formatDate(item.taken_at)}</time>
+                                </div>
+                              </div>
+
+                              <div className="uploader-badge">
+                                <button
+                                  className="avatar-button"
+                                  onClick={(e) => openPerson(item.uploader, e)}
+                                  aria-label={`Open ${item.uploaderName}'s profile`}
+                                  type="button"
+                                >
+                                  {item.uploaderAvatar ? (
+                                    <img src={item.uploaderAvatar} alt={item.uploaderName} className="uploader-avatar" />
+                                  ) : (
+                                    <div className="uploader-avatar fallback">{item.uploaderShortName.charAt(0)}</div>
+                                  )}
+                                </button>
+                                <div className="uploader-meta">
+                                  <strong>{item.uploaderShortName}</strong>
+                                  <span>Uploaded this memory</span>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
                     </div>
                   </div>
 
-                  {totalPages > 1 ? (
+                  {(selectedSection === 'directory' ? directoryTotalPages : totalPages) > 1 ? (
                     <div className="pagination">
                       <button
                         className="pagination-button"
@@ -844,7 +1016,7 @@ export default function GalleryClient({
                       </button>
 
                       <div className="pagination-pages">
-                        {Array.from({ length: totalPages }, (_, index) => {
+                        {Array.from({ length: selectedSection === 'directory' ? directoryTotalPages : totalPages }, (_, index) => {
                           const page = index + 1
                           return (
                             <button
@@ -861,8 +1033,8 @@ export default function GalleryClient({
 
                       <button
                         className="pagination-button"
-                        onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((page) => Math.min(selectedSection === 'directory' ? directoryTotalPages : totalPages, page + 1))}
+                        disabled={currentPage === (selectedSection === 'directory' ? directoryTotalPages : totalPages)}
                         type="button"
                       >
                         Next
@@ -1114,47 +1286,77 @@ export default function GalleryClient({
       ) : null}
 
       {selectedPerson ? (
-        <div className="person-lightbox" onClick={() => setSelectedPerson(null)}>
-          <div className="person-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="lightbox" onClick={() => setSelectedPerson(null)}>
+          <div className="lightbox-panel person-detail-panel" onClick={(e) => e.stopPropagation()}>
             <button className="close-button" onClick={() => setSelectedPerson(null)} type="button">
               ×
             </button>
 
-            <div className="person-kicker">{selectedPerson.role}</div>
-
-            <div className="person-top">
+            <div className="lightbox-image-wrap person-detail-image-wrap">
               {selectedPerson.profile_photo_url ? (
                 <img
                   src={selectedPerson.profile_photo_url}
-                  alt={formatLongName(selectedPerson.first_name, selectedPerson.last_name)}
-                  className="person-avatar"
+                  alt={formatShortName(selectedPerson.first_name, selectedPerson.last_name)}
+                  className="lightbox-image"
                 />
               ) : (
-                <div className="person-avatar fallback">
+                <div className="lightbox-image directory-fallback-image large">
                   {formatShortName(selectedPerson.first_name, selectedPerson.last_name).charAt(0)}
                 </div>
               )}
-
-              <div>
-                <h2>{formatLongName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
-                <p className="person-location">{personLocation(selectedPerson) || 'Location not shared'}</p>
-              </div>
             </div>
 
-            <div className="person-section">
-              <h3>About this traveler</h3>
-              <p>{selectedPerson.why_did_you_come || 'No “why I came” response has been added yet.'}</p>
-            </div>
+            <div className="lightbox-info person-detail-info">
+              <div className="person-kicker">{(selectedPerson.role || '').trim() || 'Traveler'}</div>
 
-            <div className="person-section">
-              <h3>Post-trip reflection</h3>
-              <p>{selectedPerson.post_trip_reflection || 'No reflection has been added yet.'}</p>
-            </div>
+              <h2>{formatShortName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
+              <p className="location-text">{personLocation(selectedPerson) || 'Location not shared'}</p>
 
-            {currentUserId ? (
               <div className="person-section">
-                <h3>Contact information</h3>
-                {selectedPerson.show_contact ? (
+                <h3>About this traveler</h3>
+                <p>{selectedPerson.why_did_you_come || 'No “why I came” response has been added yet.'}</p>
+              </div>
+
+              <div className="person-section">
+                <h3>Post-trip reflection</h3>
+                <p>{selectedPerson.post_trip_reflection || 'No reflection has been added yet.'}</p>
+              </div>
+
+              {selectedPersonRelationships.length ? (
+                <div className="person-section">
+                  <h3>Relationships</h3>
+                  <div className="relationship-pill-list">
+                    {selectedPersonRelationships.map((relationship) => (
+                      <button
+                        key={`${relationship.attendee.attendee_id}-${relationship.label}`}
+                        className="relationship-pill"
+                        onClick={() => setSelectedPerson(relationship.attendee)}
+                        type="button"
+                      >
+                        {relationship.attendee.profile_photo_url ? (
+                          <img
+                            src={relationship.attendee.profile_photo_url}
+                            alt={formatShortName(relationship.attendee.first_name, relationship.attendee.last_name)}
+                            className="relationship-avatar"
+                          />
+                        ) : (
+                          <div className="relationship-avatar fallback">
+                            {formatShortName(relationship.attendee.first_name, relationship.attendee.last_name).charAt(0)}
+                          </div>
+                        )}
+                        <span className="relationship-copy">
+                          <strong>{formatShortName(relationship.attendee.first_name, relationship.attendee.last_name)}</strong>
+                          <small>{relationship.label}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedPerson.show_contact ? (
+                <div className="person-section">
+                  <h3>Contact information</h3>
                   <div className="contact-grid">
                     <div className="contact-card">
                       <strong>Email</strong>
@@ -1165,13 +1367,13 @@ export default function GalleryClient({
                       <span>{selectedPerson.phone || 'Not provided'}</span>
                     </div>
                   </div>
-                ) : (
-                  <p>This attendee has chosen not to share contact information.</p>
-                )}
-              </div>
-            ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
+      ) : null}
+
       ) : null}
 
     <style jsx>{`
@@ -1676,6 +1878,97 @@ export default function GalleryClient({
         object-fit: cover;
         background: #e7dcc8;
       }
+
+      .directory-fallback-image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #eadfc9;
+        color: #6d5735;
+        font-size: 54px;
+        font-weight: 800;
+      }
+
+      .directory-fallback-image.large {
+        font-size: 96px;
+      }
+
+      .directory-tab {
+        background: #efe4cf;
+        border-color: #d8c29a;
+      }
+
+      .directory-tab.active {
+        background: #d9e3f0;
+        border-color: #a9bdd7;
+        box-shadow: 0 12px 24px rgba(53, 74, 107, 0.14);
+      }
+
+      .person-detail-panel {
+        max-width: 1200px;
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+
+      .person-detail-image-wrap {
+        background: #ede2cf;
+      }
+
+      .person-detail-info {
+        overflow: auto;
+      }
+
+      .relationship-pill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .relationship-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid #eadcc1;
+        background: #fbf5ea;
+        border-radius: 999px;
+        padding: 8px 12px 8px 8px;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .relationship-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        object-fit: cover;
+        background: #d7c5a8;
+        flex-shrink: 0;
+      }
+
+      .relationship-avatar.fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #3a2d1c;
+      }
+
+      .relationship-copy {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .relationship-copy strong {
+        font-size: 14px;
+        color: #231a12;
+      }
+
+      .relationship-copy small {
+        font-size: 12px;
+        color: #6e5d4c;
+      }
+
     
       .uploader-badge {
         display: flex;
