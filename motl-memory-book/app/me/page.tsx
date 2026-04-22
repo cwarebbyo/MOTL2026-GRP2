@@ -19,6 +19,72 @@ type Attendee = {
   role?: string | null
 }
 
+const PROFILE_MAX_DIMENSION = 2000
+const PROFILE_JPEG_QUALITY = 0.85
+
+function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new Image()
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(image)
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Could not read this image file.'))
+    }
+
+    image.src = objectUrl
+  })
+}
+
+async function normalizeProfilePhoto(file: File): Promise<File> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Please choose an image file.')
+  }
+
+  const image = await loadImageFromFile(file)
+  const width = image.naturalWidth || image.width
+  const height = image.naturalHeight || image.height
+
+  if (!width || !height) {
+    throw new Error('Could not read this image file.')
+  }
+
+  const scale = Math.min(1, PROFILE_MAX_DIMENSION / Math.max(width, height))
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = targetWidth
+  canvas.height = targetHeight
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('Your browser could not process this image.')
+  }
+
+  context.drawImage(image, 0, 0, targetWidth, targetHeight)
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', PROFILE_JPEG_QUALITY)
+  })
+
+  if (!blob) {
+    throw new Error('Could not prepare this photo for upload.')
+  }
+
+  const baseName = (file.name || 'profile-photo').replace(/\.[^.]+$/, '')
+
+  return new File([blob], `${baseName}.jpg`, {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  })
+}
+
 export default function MePage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -61,9 +127,10 @@ export default function MePage() {
     setMessage('')
 
     try {
+      const processedPhoto = await normalizeProfilePhoto(selectedPhoto)
       const formData = new FormData()
       formData.append('attendee_id', attendee.attendee_id)
-      formData.append('file', selectedPhoto)
+      formData.append('file', processedPhoto)
 
       const res = await fetch('/api/me/photo', {
         method: 'POST',
@@ -82,8 +149,8 @@ export default function MePage() {
       setAttendee(json.attendee)
       setMessage('Your profile photo has been updated.')
       closePhotoModal()
-    } catch {
-      setPhotoError('Something went wrong while uploading your photo.')
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Something went wrong while uploading your photo.')
     } finally {
       setUploadingPhoto(false)
     }
@@ -289,7 +356,9 @@ export default function MePage() {
 
             <div className="photo-kicker">Profile Photo</div>
             <h2>Upload a new profile photo</h2>
-            <p className="photo-helper">Choose a clear photo of yourself. JPG, PNG, WEBP, or GIF only.</p>
+            <p className="photo-helper">
+              Choose any clear image of yourself. We will resize and optimize it automatically.
+            </p>
 
             <div className="upload-field">
               <label htmlFor="profile-photo-upload">Choose photo</label>
@@ -297,7 +366,7 @@ export default function MePage() {
                 ref={fileInputRef}
                 id="profile-photo-upload"
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
+                accept="image/*"
                 onChange={(e) => {
                   const nextFile = e.target.files?.[0] || null
                   setSelectedPhoto(nextFile)
@@ -425,15 +494,14 @@ export default function MePage() {
 
         .name-block {
           min-width: 0;
-          padding-bottom: 10px;
+          padding-bottom: 8px;
         }
 
         .name-block h1 {
           margin: 0;
-          font-size: clamp(48px, 6vw, 74px);
-          line-height: 0.95;
+          font-size: clamp(34px, 6vw, 60px);
+          line-height: 0.96;
           letter-spacing: -0.05em;
-          font-weight: 800;
           color: #23160f;
         }
 
@@ -441,27 +509,24 @@ export default function MePage() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
-          padding: 16px 24px;
-          border: 1px solid #ccb27a;
-          border-radius: 22px;
-          background: #f6ecd7;
-          color: #7b6033;
+          margin-top: 4px;
+          padding: 12px 16px;
+          border: 1px solid #d6c19a;
+          border-radius: 16px;
+          background: #f7ecd7;
+          color: #6b5430;
           font-size: 14px;
           font-weight: 700;
           cursor: pointer;
+          flex-shrink: 0;
         }
 
         .back-button:hover {
-          background: #f2e3c0;
+          background: #f1e3c5;
         }
 
         .form-shell {
-          border-radius: 32px;
-          background: rgba(253, 249, 241, 0.9);
-          border: 1px solid #eadcc1;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 14px 30px rgba(63, 46, 22, 0.06);
-          padding: 28px 38px 40px;
+          margin-top: 8px;
         }
 
         .profile-grid {
@@ -485,9 +550,9 @@ export default function MePage() {
           display: block;
           margin: 0 0 10px 0;
           font-size: 12px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
           font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
           color: #8a6a34;
         }
 
@@ -495,83 +560,83 @@ export default function MePage() {
         .field-group textarea {
           width: 100%;
           box-sizing: border-box;
-          padding: 16px 24px;
-          border-radius: 22px;
-          border: 1px solid #d9c29a;
-          background: #fffefb;
+          border: 1px solid #dbc8a8;
+          background: #fffdf9;
+          border-radius: 18px;
+          padding: 16px 18px;
           font-size: 16px;
-          line-height: 1.45;
           color: #231a12;
           outline: none;
           font-family: inherit;
         }
 
-        .field-group input::placeholder,
-        .field-group textarea::placeholder {
-          color: #a5a1a0;
-        }
-
         .field-group textarea {
+          min-height: 132px;
           resize: vertical;
-          min-height: 190px;
         }
 
         .toggle-row {
           grid-column: 1 / -1;
           display: flex;
           align-items: center;
-          margin: -2px 0 -4px 0;
+          margin: -2px 0 -6px 0;
         }
 
         .checkbox-row {
           display: inline-flex;
           align-items: center;
-          gap: 14px;
+          gap: 12px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #4b3d30;
           cursor: pointer;
         }
 
         .checkbox-row input {
-          width: 24px;
-          height: 24px;
+          width: 18px;
+          height: 18px;
           margin: 0;
-          accent-color: #2c7ef7;
           flex-shrink: 0;
         }
 
-        .checkbox-row span {
-          font-size: 16px;
-          font-weight: 700;
-          color: #4d4032;
-        }
-
         .message {
-          margin: 20px 0 0 0;
+          margin: 18px 0 0 0;
           color: #355f32;
-          font-size: 14px;
           font-weight: 600;
         }
 
-        .save-button {
+        .save-button,
+        .secondary-button {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 100%;
-          min-height: 72px;
-          margin-top: 26px;
-          padding: 18px 20px;
-          border: none;
-          border-radius: 26px;
-          background: linear-gradient(90deg, #2a190d 0%, #1d1008 100%);
-          color: white;
-          font-size: 26px;
-          font-weight: 800;
+          min-height: 50px;
+          padding: 14px 20px;
+          border-radius: 16px;
+          font-size: 15px;
+          font-weight: 700;
           cursor: pointer;
-          box-shadow: 0 16px 30px rgba(38, 22, 10, 0.18);
+          transition: background 0.18s ease, opacity 0.18s ease;
         }
 
-        .save-button:disabled {
-          opacity: 0.7;
+        .save-button {
+          width: 100%;
+          margin-top: 22px;
+          border: none;
+          background: #231a12;
+          color: white;
+        }
+
+        .save-button:disabled,
+        .secondary-button:disabled {
+          opacity: 0.6;
           cursor: default;
+        }
+
+        .secondary-button {
+          border: 1px solid #d6c19a;
+          background: #f7ecd7;
+          color: #6b5430;
         }
 
         .photo-lightbox {
@@ -590,10 +655,25 @@ export default function MePage() {
           position: relative;
           width: 100%;
           max-width: 560px;
-          padding: 28px;
           border-radius: 30px;
           background: #fffdf9;
           box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+          padding: 28px;
+        }
+
+        .close-button {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 42px;
+          height: 42px;
+          border: none;
+          border-radius: 999px;
+          background: rgba(23, 18, 13, 0.78);
+          color: white;
+          font-size: 28px;
+          line-height: 1;
+          cursor: pointer;
         }
 
         .photo-kicker {
@@ -641,85 +721,26 @@ export default function MePage() {
         }
 
         .selected-file {
-          margin: 14px 0 0 0;
-          color: #4d4032;
+          margin: 12px 0 0 0;
+          color: #5d4d3c;
           font-size: 14px;
-          font-weight: 600;
         }
 
         .photo-error {
-          margin: 14px 0 0 0;
+          margin: 12px 0 0 0;
           color: #8b2f2f;
           font-size: 14px;
         }
 
         .photo-actions {
-          display: flex;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 12px;
-          margin-top: 20px;
-        }
-
-        .secondary-button {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 52px;
-          padding: 14px 18px;
-          border: 1px solid #d6c19a;
-          background: #f7ecd7;
-          color: #6b5430;
-          border-radius: 16px;
-          font-weight: 700;
-          cursor: pointer;
+          margin-top: 22px;
         }
 
         .modal-save-button {
-          min-height: 52px;
           margin-top: 0;
-          padding: 14px 18px;
-          border-radius: 16px;
-          font-size: 16px;
-          box-shadow: none;
-          flex: 1;
-        }
-
-        .close-button {
-          position: absolute;
-          top: 14px;
-          right: 14px;
-          width: 42px;
-          height: 42px;
-          border: none;
-          border-radius: 999px;
-          background: rgba(23, 18, 13, 0.78);
-          color: white;
-          font-size: 28px;
-          line-height: 1;
-          cursor: pointer;
-          z-index: 2;
-        }
-
-        @media (max-width: 980px) {
-          .me-card {
-            padding: 22px;
-          }
-
-          .me-top {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .identity-block {
-            align-items: center;
-          }
-
-          .back-button {
-            width: 100%;
-          }
-
-          .form-shell {
-            padding: 24px;
-          }
         }
 
         @media (max-width: 820px) {
@@ -734,29 +755,37 @@ export default function MePage() {
         }
 
         @media (max-width: 760px) {
+          .me-card {
+            padding: 20px;
+            border-radius: 24px;
+          }
+
+          .me-top {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
           .identity-block {
             flex-direction: column;
             align-items: flex-start;
+            gap: 18px;
           }
 
           .portrait,
-          .portrait-fallback,
-          .portrait-button {
-            width: 180px;
-            height: 180px;
+          .portrait-fallback {
+            width: 200px;
+            height: 200px;
           }
+        }
 
-          .field-group textarea {
-            min-height: 150px;
-          }
-
-          .save-button {
-            min-height: 60px;
-            font-size: 22px;
+        @media (max-width: 640px) {
+          .photo-panel {
+            padding: 20px;
+            border-radius: 22px;
           }
 
           .photo-actions {
-            flex-direction: column;
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
