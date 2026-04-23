@@ -11,7 +11,7 @@ export default async function GalleryPage() {
       supabaseAdmin
         .from('attendees')
         .select(
-          'attendee_id, first_name, last_name, profile_photo_url, city, state, country, show_contact, email, phone, why_did_you_come, post_trip_reflection, role'
+          'attendee_id, first_name, last_name, profile_photo_url, city, state, country, show_contact, email, phone, why_did_you_come, post_trip_reflection, role, relationships'
         ),
     ])
 
