@@ -293,6 +293,7 @@ export default function GalleryClient({
   const [isUploading, setIsUploading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState('')
+  const [relationshipMap, setRelationshipMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const stored = localStorage.getItem('attendee')
@@ -310,16 +311,57 @@ export default function GalleryClient({
     setMediaItems(media)
   }, [media])
 
-  const attendeeMap = useMemo(() => {
-    const map = new Map<string, AttendeeRow>()
-    attendees.forEach((person) => map.set(person.attendee_id, person))
-    return map
-  }, [attendees])
 
-  const currentUser = useMemo(
-    () => (currentUserId ? attendees.find((person) => person.attendee_id === currentUserId) || null : null),
-    [attendees, currentUserId]
-  )
+useEffect(() => {
+  let isMounted = true
+
+  async function loadRelationships() {
+    const { data, error } = await supabase
+      .from('attendees')
+      .select('attendee_id, relationships')
+
+    if (!isMounted || error || !data) return
+
+    const nextMap: Record<string, string> = {}
+    data.forEach((person: { attendee_id: string; relationships?: string | null }) => {
+      if (person.attendee_id) {
+        nextMap[person.attendee_id] = person.relationships || ''
+      }
+    })
+
+    setRelationshipMap(nextMap)
+  }
+
+  loadRelationships()
+
+  return () => {
+    isMounted = false
+  }
+}, [])
+
+
+const mergedAttendees = useMemo(
+  () =>
+    attendees.map((person) => ({
+      ...person,
+      relationships:
+        relationshipMap[person.attendee_id] !== undefined
+          ? relationshipMap[person.attendee_id]
+          : person.relationships,
+    })),
+  [attendees, relationshipMap]
+)
+
+const attendeeMap = useMemo(() => {
+  const map = new Map<string, AttendeeRow>()
+  mergedAttendees.forEach((person) => map.set(person.attendee_id, person))
+  return map
+}, [mergedAttendees])
+
+const currentUser = useMemo(
+  () => (currentUserId ? mergedAttendees.find((person) => person.attendee_id === currentUserId) || null : null),
+  [mergedAttendees, currentUserId]
+)
 
   const items = useMemo<GalleryItem[]>(() => {
     return mediaItems
@@ -396,7 +438,7 @@ export default function GalleryClient({
 
   const directoryItems = useMemo<DirectoryItem[]>(() => {
     const q = search.trim().toLowerCase()
-    return attendees
+    return mergedAttendees
       .slice()
       .sort((a, b) => formatShortName(a.first_name, a.last_name).localeCompare(formatShortName(b.first_name, b.last_name)))
       .filter((person) => {
@@ -416,7 +458,7 @@ export default function GalleryClient({
         location: personLocation(person) || 'Location not shared',
         avatar: person.profile_photo_url || null,
       }))
-  }, [attendees, search])
+  }, [mergedAttendees, search])
 
   const directoryTotalPages = Math.max(1, Math.ceil(directoryItems.length / PHOTOS_PER_PAGE))
 
