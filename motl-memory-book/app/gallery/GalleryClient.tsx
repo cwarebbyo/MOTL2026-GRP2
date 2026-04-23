@@ -156,11 +156,11 @@ function extractRelationships(person: AttendeeRow | null, attendeeMap: Map<strin
     const trimmed = entry.trim()
     if (!trimmed) continue
 
-    const dashIndex = trimmed.indexOf('-')
+    const dashIndex = trimmed.lastIndexOf('-')
     if (dashIndex === -1) continue
 
-    const relatedId = trimmed.slice(0, dashIndex).trim()
-    const label = trimmed.slice(dashIndex + 1).trim()
+    const label = trimmed.slice(0, dashIndex).trim()
+    const relatedId = trimmed.slice(dashIndex + 1).trim()
 
     if (!relatedId || !label || String(relatedId) === String(person.attendee_id)) continue
 
