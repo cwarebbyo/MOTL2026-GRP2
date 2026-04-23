@@ -997,7 +997,7 @@ const currentUser = useMemo(
                                 </button>
                                 <div className="uploader-meta">
                                   <strong>{item.shortName}</strong>
-                                  <span>{(item.attendee.role || '').trim() || 'Traveler'}</span>
+                                  <span>{(item.attendee.role || '').trim() || 'Participant'}</span><br/><br/>
                                 </div>
                               </div>
                             </article>
