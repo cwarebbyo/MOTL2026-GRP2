@@ -1352,8 +1352,8 @@ const currentUser = useMemo(
             </div>
 
             <div className="lightbox-info person-detail-info">
-              <div className="person-kicker">{(selectedPerson.role || '').trim() || 'Participant'}<br/><br/></div>
-
+              <div className="person-kicker">{(selectedPerson.role || '').trim() || 'Participant'}</div>
+              <br/><br/>
               <h2>{formatShortName(selectedPerson.first_name, selectedPerson.last_name)}</h2>
               <p className="location-text">{personLocation(selectedPerson) || 'Location not shared'}</p>
 
