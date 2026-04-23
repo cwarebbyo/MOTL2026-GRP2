@@ -339,11 +339,6 @@ useEffect(() => {
   }
 }, [])
 
-const resolvedSelectedPerson = useMemo(
-  () => (selectedPerson ? attendeeMap.get(selectedPerson.attendee_id) || selectedPerson : null),
-  [selectedPerson, attendeeMap]
-)
-
 const mergedAttendees = useMemo(
   () =>
     attendees.map((person) => ({
@@ -474,6 +469,11 @@ const currentUser = useMemo(
   const resolvedSelectedPerson = useMemo(
     () => (selectedPerson ? attendeeMap.get(selectedPerson.attendee_id) || selectedPerson : null),
     [selectedPerson, attendeeMap]
+  )
+
+  const selectedPersonRelationships = useMemo(
+    () => extractRelationships(resolvedSelectedPerson, attendeeMap),
+    [resolvedSelectedPerson, attendeeMap]
   )
 
   useEffect(() => {
