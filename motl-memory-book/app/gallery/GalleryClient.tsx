@@ -1,4 +1,4 @@
- 'use client'
+'use client'
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -339,6 +339,10 @@ useEffect(() => {
   }
 }, [])
 
+const resolvedSelectedPerson = useMemo(
+  () => (selectedPerson ? attendeeMap.get(selectedPerson.attendee_id) || selectedPerson : null),
+  [selectedPerson, attendeeMap]
+)
 
 const mergedAttendees = useMemo(
   () =>
@@ -466,12 +470,11 @@ const currentUser = useMemo(
     const start = (currentPage - 1) * PHOTOS_PER_PAGE
     return directoryItems.slice(start, start + PHOTOS_PER_PAGE)
   }, [directoryItems, currentPage])
-
-  const selectedPersonRelationships = useMemo(
-    () => extractRelationships(selectedPerson, attendeeMap),
+ 
+  const resolvedSelectedPerson = useMemo(
+    () => (selectedPerson ? attendeeMap.get(selectedPerson.attendee_id) || selectedPerson : null),
     [selectedPerson, attendeeMap]
   )
-
 
   useEffect(() => {
     setCurrentPage(1)
