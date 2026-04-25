@@ -1179,7 +1179,7 @@ const currentUser = useMemo(
             <div className="person-kicker">Memory Book Upload</div>
             <h2>Add photos or videos</h2>
             <p className="login-helper upload-helper">
-              Upload up to 10 files at a time. Images are resized to a maximum width or height of 2000px and saved as JPEG at 85% quality. Videos are uploaded as-is and must be 50MB or smaller.
+              Upload up to 10 files at a time.  Videos should be no more than 50MB.
             </p>
 
             <form onSubmit={handleUploadSubmit} className="upload-form">
