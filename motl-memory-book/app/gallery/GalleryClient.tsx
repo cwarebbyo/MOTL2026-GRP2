@@ -1197,13 +1197,28 @@ const currentUser = useMemo(
               </label>
 
               {selectedUploadFiles.length ? (
-                <div className="upload-file-list">
-                  {selectedUploadFiles.map((file) => (
-                    <div key={`${file.name}-${file.lastModified}`} className="upload-file-item">
-                      <strong>{file.name}</strong>
-                      <span>{file.type.startsWith('video/') ? 'Video' : 'Image'} · {(file.size / (1024 * 1024)).toFixed(1)} MB</span>
-                    </div>
-                  ))}
+                <div className="upload-summary">
+                  {(() => {
+                    const photoCount = selectedUploadFiles.filter((file) =>
+                      file.type.startsWith('image/')
+                    ).length
+
+                    const videoCount = selectedUploadFiles.filter((file) =>
+                      file.type.startsWith('video/')
+                    ).length
+
+                    const parts = []
+
+                    if (photoCount) {
+                      parts.push(`${photoCount} photo${photoCount === 1 ? '' : 's'}`)
+                    }
+
+                    if (videoCount) {
+                      parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`)
+                    }
+
+                    return `${parts.join(', ')} selected for upload`
+                  })()}
                 </div>
               ) : null}
 
@@ -2342,31 +2357,15 @@ const currentUser = useMemo(
         display: none;
       }
 
-      .upload-file-list {
-        display: grid;
-        gap: 10px;
-        max-height: 220px;
-        overflow: auto;
-      }
-
-      .upload-file-item {
-        display: grid;
-        gap: 4px;
+      .upload-summary {
+        margin: 0;
         padding: 12px 14px;
         border-radius: 14px;
         background: #fbf5ea;
         border: 1px solid #eadcc1;
-      }
-
-      .upload-file-item strong {
+        color: #6b5430;
         font-size: 14px;
-        color: #2f2418;
-        word-break: break-word;
-      }
-
-      .upload-file-item span {
-        font-size: 12px;
-        color: #6e5d4c;
+        font-weight: 700;
       }
 
       .upload-message {
